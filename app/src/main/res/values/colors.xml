@@ -1,7 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
 
-    <color name="nav_selected">#190848</color>
-    <color name="nav_unselected">#99A1AF</color>
+    <color name="colorPrimary">#29293F</color>
+    <color name="colorPrimaryVariant">#1E1E2A</color>
+    <color name="colorSecondary">#E2E1E5</color>
+    <color name="colorAccent">#EFE99A</color>
+
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+
+    <color name="gray_light">#F5F5F5</color>
+    <color name="gray_medium">#B0B4C3</color>
+    <color name="gray_dark">#707070</color>
+
+    <color name="nav_selected">@color/colorPrimary</color>
+    <color name="nav_unselected">@color/gray_medium</color>
+
+    <color name="text_primary">@color/black</color>
+    <color name="text_secondary">@color/gray_dark</color>
+
+    <color name="background_light">@color/white</color>
+    <color name="background_dark">@color/colorPrimaryVariant</color>
+
 </resources>

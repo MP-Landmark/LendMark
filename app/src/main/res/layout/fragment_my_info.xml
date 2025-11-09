@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- 이름 -->
+        <TextView
+            android:id="@+id/label_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="이름"
+            android:textSize="12sp"
+            android:textColor="@color/gray_dark" />
+
+        <TextView
+            android:id="@+id/value_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="김서울"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 학과 -->
+        <TextView
+            android:id="@+id/label_major"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="학과"
+            android:textSize="12sp"
+            android:textColor="@color/gray_dark" />
+
+        <TextView
+            android:id="@+id/value_major"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ITM전공"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 학교 이메일 -->
+        <TextView
+            android:id="@+id/label_email"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="학교 이메일"
+            android:textSize="12sp"
+            android:textColor="@color/gray_dark" />
+
+        <TextView
+            android:id="@+id/value_email"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="seoultech@seoultech.ac.kr"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 전화번호 -->
+        <TextView
+            android:id="@+id/label_phone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="전화번호"
+            android:textSize="12sp"
+            android:textColor="@color/gray_dark" />
+
+        <TextView
+            android:id="@+id/value_phone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="010-1234-5678"
+            android:textSize="16sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 총 예약 횟수 -->
+        <TextView
+            android:id="@+id/label_total_reservation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="총 예약 횟수"
+            android:textSize="12sp"
+            android:textColor="@color/gray_dark" />
+
+        <TextView
+            android:id="@+id/value_total_reservation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3회"
+            android:textSize="16sp" />
+
+    </LinearLayout>
+</ScrollView>
