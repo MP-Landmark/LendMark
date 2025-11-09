@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 선택된 탭 -->
+    <item android:color="@color/nav_selected" android:state_checked="true" />
+    <!-- 선택되지 않은 탭 -->
+    <item android:color="@color/nav_unselected" android:state_checked="false" />
+</selector>
