@@ -48,8 +48,9 @@ com.lendmark
  │   │
  │   ├─ notification/
  │   │    ├─ NotificationListFragment.kt    // 알림 목록 페이지
- │   │    ├─ NotificationDetailFragment.kt  // 알림 상세 (선택)
- │   │    └─ NotificationViewModel.kt
+ │   │    ├─ NotificationAdapter.kt         // 각 알림 항복 ViewHolder 및 클릭 이벤트 처리
+ │   │    ├─ NotificationDetailDialog.kt    // 알림 클릭 시 팝업 다이얼 로그
+ │   │    └─ NotificationViewModel.kt       // 알림 데이터 관리
  │   │
  │   └─ common/                             // 공통 UI 컴포넌트
  │        ├─ BaseFragment.kt
