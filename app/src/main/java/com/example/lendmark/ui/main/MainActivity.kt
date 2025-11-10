@@ -18,6 +18,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // initial DB//uploadInitialData()
+        //uploadTimetableData()
         setContentView(R.layout.activity_main)
 
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNav)
@@ -58,7 +59,11 @@ class MainActivity : AppCompatActivity() {
             .commit()
     }
 
+
+
+
     // initial DB
+
 
 //    fun uploadInitialData() {
 //        val db = FirebaseFirestore.getInstance()
@@ -98,18 +103,8 @@ class MainActivity : AppCompatActivity() {
 //            db.collection("tag_catalog").document(tag["id"] as String).set(tag)
 //        }
 //
-//        // 3. Semester / roomSchedules
-//        val weekly = listOf(
-//            mapOf("dow" to 1, "startMin" to 540, "endMin" to 630, "courseId" to "CS101", "title" to "Intro to CS", "dept" to "CSE"),
-//            mapOf("dow" to 3, "startMin" to 780, "endMin" to 870, "courseId" to "EE210", "title" to "Circuits", "dept" to "EE")
-//        )
-//        val schedule = mapOf("weekly" to weekly)
-//        db.collection("semesters").document("2025-fall")
-//            .collection("roomSchedules").document("dasan(01)-107")
-//            .set(schedule)
-//
-//
-//        // 4. Users (sample)
+
+//        // 3. Users (sample)
 //        val users = listOf(
 //            mapOf(
 //                "id" to "phy9558",
@@ -144,7 +139,71 @@ class MainActivity : AppCompatActivity() {
 //
 //
 //
+//    }
+
+    // timetable DB
+//    fun uploadTimetableData() {
+//        val db = FirebaseFirestore.getInstance()
 //
+//        // 1 예시 학과 데이터
+//        val timetableData = listOf(
+//            mapOf(
+//                "college" to "College of Engineering",
+//                "department" to "Department of Mechanical System Design Engineering",
+//                "lectures" to listOf(
+//                    mapOf(
+//                        "subject" to "General Physics(1)",
+//                        "day" to "Thu",
+//                        "periods" to listOf(3,4),
+//                        "room" to "Davinci Hall(039)-104"
+//                    ),
+//                    mapOf(
+//                        "subject" to "General Physics(1)",
+//                        "day" to "Tue",
+//                        "periods" to listOf(6,7),
+//                        "room" to "Davinci Hall(039)-104"
+//                    )
+//                )
+//            ),
+//            mapOf(
+//                "college" to "College of Natural Sciences",
+//                "department" to "Department of Physics",
+//                "lectures" to listOf(
+//                    mapOf(
+//                        "subject" to "Thermodynamics",
+//                        "day" to "Mon",
+//                        "periods" to listOf(2,3,4),
+//                        "room" to "Darwin Hall(031)-204"
+//                    ),
+//                    mapOf(
+//                        "subject" to "Quantum Mechanics",
+//                        "day" to "Fri",
+//                        "periods" to listOf(5,6,7),
+//                        "room" to "Darwin Hall(031)-201"
+//                    )
+//                )
+//            )
+//        )
+//
+//        // 2 firestore에 업로드
+//        for (dept in timetableData) {
+//            val deptName = (dept["department"] as String)
+//                .lowercase()
+//                .replace(" ", "-")
+//                .replace("department-of-", "")
+//
+//            db.collection("timetables")
+//                .document("2025-fall")
+//                .collection("departments")
+//                .document(deptName)
+//                .set(dept)
+//                .addOnSuccessListener {
+//                    Log.d("FirebaseSeed", "Uploaded timetable for $deptName")
+//                }
+//                .addOnFailureListener {
+//                    Log.e("FirebaseSeed", "Failed to upload $deptName", it)
+//                }
+//        }
 //    }
 
 
