@@ -70,7 +70,7 @@
                 android:textColor="#364153"/>
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Email + Verify Button -->
+        <!-- School Email -->
         <TextView
             android:id="@+id/tvEmailLabel"
             android:layout_width="wrap_content"
@@ -87,11 +87,11 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
+            android:gravity="center_vertical"
             app:layout_constraintTop_toBottomOf="@id/tvEmailLabel"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
-            <!-- 입력칸 (이메일 아이디만 입력) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -110,31 +110,63 @@
                     android:textColor="#364153" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- 고정된 도메인 표시 -->
             <TextView
                 android:id="@+id/tvEmailDomain"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
                 android:text="@seoultech.ac.kr"
-                android:textColor="#364153"
                 android:textSize="14sp"
+                android:textColor="#364153"
                 android:paddingStart="6dp"
-                android:paddingEnd="6dp" />
+                android:paddingEnd="6dp"/>
 
-            <!-- 인증 버튼 -->
             <Button
                 android:id="@+id/btnVerify"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
-                android:layout_marginStart="4dp"
+                android:layout_marginStart="6dp"
                 android:backgroundTint="#190848"
                 android:text="Verify"
                 android:textColor="@android:color/white"
-                android:textSize="13sp" />
+                android:textSize="13sp"/>
         </LinearLayout>
 
-        <!-- Phone Number -->
+        <!-- Verification Code -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/inputCodeLayout"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:hintEnabled="false"
+            app:boxBackgroundMode="filled"
+            app:boxBackgroundColor="#F9FAFB"
+            app:boxStrokeColor="#E5E7EB"
+            app:layout_constraintTop_toBottomOf="@id/emailContainer"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/etVerifyCode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Enter 6-digit verification code"
+                android:inputType="number"
+                android:maxLength="6"
+                android:textColor="#364153" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <Button
+            android:id="@+id/btnConfirmCode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Confirm Code"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@color/purple_700"
+            android:layout_marginTop="8dp"
+            app:layout_constraintTop_toBottomOf="@id/inputCodeLayout"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <!-- Phone -->
         <TextView
             android:id="@+id/tvPhoneLabel"
             android:layout_width="wrap_content"
@@ -142,7 +174,7 @@
             android:text="Phone Number"
             android:textSize="14sp"
             android:textColor="#000000"
-            app:layout_constraintTop_toBottomOf="@id/emailContainer"
+            app:layout_constraintTop_toBottomOf="@id/btnConfirmCode"
             app:layout_constraintStart_toStartOf="parent"
             android:layout_marginTop="16dp"/>
 
@@ -179,14 +211,21 @@
             app:layout_constraintStart_toStartOf="parent"
             android:layout_marginTop="16dp"/>
 
-        <Spinner
-            android:id="@+id/spinnerDept"
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/deptInputLayout"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             app:layout_constraintTop_toBottomOf="@id/tvDeptLabel"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"/>
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <AutoCompleteTextView
+                android:id="@+id/autoDept"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Select department" />
+        </com.google.android.material.textfield.TextInputLayout>
 
         <!-- Password -->
         <TextView
@@ -196,7 +235,7 @@
             android:text="Password"
             android:textColor="#000000"
             android:textSize="14sp"
-            app:layout_constraintTop_toBottomOf="@id/spinnerDept"
+            app:layout_constraintTop_toBottomOf="@id/deptInputLayout"
             app:layout_constraintStart_toStartOf="parent"
             android:layout_marginTop="16dp"/>
 
@@ -267,11 +306,10 @@
             android:textColor="@android:color/white"
             android:backgroundTint="#190848"
             android:textSize="16sp"
+            android:layout_marginTop="32dp"
             app:layout_constraintTop_toBottomOf="@id/inputConfirmPwLayout"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            android:layout_marginTop="32dp"
             app:cornerRadius="8dp"/>
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 </ScrollView>

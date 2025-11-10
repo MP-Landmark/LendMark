@@ -1,4 +1,4 @@
-package com.example.lendmark.ui.reservation
+package com.example.lendmark.ui.reservation.building
 
 import android.os.Bundle
 import android.view.LayoutInflater
