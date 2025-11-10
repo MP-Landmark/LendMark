@@ -41,3 +41,5 @@ const TARGET_URL = 'https://for-s.seoultech.ac.kr/html/pub/schedule.jsp';
   fs.writeFileSync('departments.json', JSON.stringify(departments, null, 2), 'utf-8');
   console.log('Department list saved successfully → departments.json');
 })();
+
+
