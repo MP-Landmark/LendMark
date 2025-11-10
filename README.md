@@ -11,8 +11,11 @@ com.lendmark
  │   │
  │   │    ├─ signup/
  │   │    │    ├─ SignupFragment.kt
+ │   │    │    ├─ EmailVerifyDialog.kt
  │   │    │    └─ SignupViewModel.kt
  │   │  
+ │   │    ├─ findaccount/
+ │   │    │    └─ FindAccountFragment.kt
  │   │
  │   ├─ main/                      // 메인 프레임 (BottomNav)
  │   │    ├─ MainActivity.kt
