@@ -17,6 +17,10 @@ local.properties
 # Firebase config file (보안용)
 app/google-services.json
 
+scripts/serviceAccountKey.json
+scripts/.env
+scripts/node_modules
+
 # Gradle
 .gradle/
 build/
@@ -24,4 +28,7 @@ build/
 
 # Log
 *.log
+
+
+
 
