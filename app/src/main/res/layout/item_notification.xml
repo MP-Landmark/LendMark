@@ -14,35 +14,63 @@
         android:orientation="horizontal"
         android:padding="12dp">
 
+        <!-- 알림 아이콘: 시계 or 달력 (Adapter에서 교체) -->
         <ImageView
             android:id="@+id/ivIcon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:layout_marginEnd="8dp"
-            android:src="@drawable/ic_notifications"
-            android:tint="@color/purple_700"/>
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_icon_circle"
+            android:padding="8dp"
+            android:src="@drawable/ic_notification_clock"
+            android:tint="#190848" />
 
+        <!-- 텍스트 내용 -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:layout_weight="1">
 
+            <!-- 제목 -->
             <TextView
                 android:id="@+id/tvTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Classroom reservation starts in 30 minutes"
+                android:text="강의실 예약 시작 30분 전입니다"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                android:textColor="@color/black"/>
+                android:textColor="@color/black" />
 
+            <!-- 예약 내역 -->
             <TextView
                 android:id="@+id/tvDetail"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Reservation details: Frontier Hall #107"
+                android:text="예약 내역: 프론티어관 107호"
                 android:textSize="13sp"
-                android:textColor="@color/gray_dark"/>
+                android:textColor="@color/gray_dark"
+                android:layout_marginTop="2dp" />
+
+            <!-- 날짜 및 예약 시간 -->
+            <TextView
+                android:id="@+id/tvDate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2025-10-23 · 18:54 - 20:24"
+                android:textSize="12sp"
+                android:textColor="#6B7280"
+                android:layout_marginTop="2dp" />
+
+            <!-- 예정 (남은 시간) -->
+            <TextView
+                android:id="@+id/tvTimeLeft"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="예정: 30분 후"
+                android:textSize="12sp"
+                android:textColor="#6B7280"
+                android:layout_marginTop="2dp" />
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

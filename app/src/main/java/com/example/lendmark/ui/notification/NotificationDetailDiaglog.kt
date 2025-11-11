@@ -14,22 +14,22 @@ class NotificationDetailDialog(
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val binding = DialogNotificationDetailBinding.inflate(LayoutInflater.from(context))
 
-        // 제목, 내용 표시
+        // Set title and details
         binding.tvTitle.text = item.title
-        binding.tvDetail.text = item.detail
+        binding.tvDetail.text = "Reservation at: ${item.location} (${item.startTime} - ${item.endTime})"
 
-        // “예약 상세로 가기” 버튼 (아직 기능 미구현)
+        // "Go to Reservation Details" button (functionality not yet implemented)
         binding.btnGoReservation.setOnClickListener {
-            // TODO: 예약 상세 페이지로 이동 (추후 구현)
+            // TODO: Navigate to reservation details page (to be implemented later)
             dismiss()
         }
 
-        // 확인 버튼
+        // OK button
         binding.btnConfirm.setOnClickListener {
             dismiss()
         }
 
-        // Dialog 스타일 적용
+        // Apply dialog style
         return AlertDialog.Builder(requireContext())
             .setView(binding.root)
             .create()

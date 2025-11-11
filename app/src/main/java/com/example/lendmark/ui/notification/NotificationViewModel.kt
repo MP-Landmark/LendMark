@@ -19,15 +19,23 @@ class NotificationViewModel : ViewModel() {
         _notifications.value = listOf(
             NotificationItem(
                 id = 1,
-                title = "Classroom reservation starts in 30 minutes",
-                detail = "Reservation details: Frontier Hall #107",
-                time = "2025-10-23 18:54"
+                title = "Reservation starts in 30 minutes",
+                location = "Frontier Hall #107",
+                date = "2025-10-23",
+                startTime = "19:30",
+                endTime = "21:30",
+                remainingTime = "in 30 mins",
+                type = "start"
             ),
             NotificationItem(
                 id = 2,
-                title = "Classroom reservation ends in 10 minutes",
-                detail = "Reservation details: Mirae Hall #205",
-                time = "2025-10-23 20:14"
+                title = "Reservation ends in 10 minutes",
+                location = "Mirae Hall #205",
+                date = "2025-10-23",
+                startTime = "18:30",
+                endTime = "20:30",
+                remainingTime = "10 mins left",
+                type = "end"
             )
         )
     }
