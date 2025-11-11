@@ -1,23 +1,32 @@
 package com.example.lendmark.ui.my
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.example.lendmark.R
+import com.example.lendmark.databinding.FragmentMyPageBinding
+import com.example.lendmark.ui.auth.AuthActivity
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.firebase.auth.FirebaseAuth
 
 class MyPageFragment : Fragment() {
+    private var _binding: FragmentMyPageBinding? = null
+    private val binding get() = _binding!!
+    private val auth = FirebaseAuth.getInstance()
 
     override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
+        inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_my_page, container, false)
+    ): View {
+        _binding = FragmentMyPageBinding.inflate(inflater, container, false)
+        return binding.root
     }
+
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -52,5 +61,17 @@ class MyPageFragment : Fragment() {
                     .commit()
             }
         }
+
+        binding.tvLogout.setOnClickListener {
+            auth.signOut()
+            Toast.makeText(requireContext(), "Logged out successfully", Toast.LENGTH_SHORT).show()
+
+            // 로그인 화면(AuthActivity)로 이동
+            val intent = Intent(requireContext(), AuthActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            requireActivity().finish()  // 현재 액티비티 종료 (MainActivity 닫기)
+        }
+
     }
 }
