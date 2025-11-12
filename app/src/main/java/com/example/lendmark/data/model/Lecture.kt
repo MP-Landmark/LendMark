@@ -1,12 +1,12 @@
 package com.example.lendmark.data.model
 
 data class Lecture(
-    val dow: Int = 0,          // 1=Mon ... 7=Sun
-    val startMin: Int = 0,     // minutes from 00:00
-    val endMin: Int = 0,
-    val courseId: String = "",
-    val title: String = "",
-    val dept: String = ""
+    val room: String = "",          // 강의실 이름 (예: "405")
+    val day: String = "",           // 요일 ("Mon", "Tue" ...)
+    val periodStart: Int = 0,       // 시작 교시
+    val periodEnd: Int = 0,         // 종료 교시
+    val subject: String = ""        // 과목명
 )
+
 
 

@@ -1,4 +1,4 @@
-package com.example.lendmark.ui.reservation.building
+package com.example.lendmark.ui.reservation
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -7,13 +7,13 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import com.example.lendmark.R
 
-class BuildingListFragment : Fragment() {
+class ReservationMapFragment : Fragment() {
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.fragment_building_list, container, false)
+        return inflater.inflate(R.layout.fragment_reservation_map, container, false)
     }
 }

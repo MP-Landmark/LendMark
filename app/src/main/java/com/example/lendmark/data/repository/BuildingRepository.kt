@@ -16,7 +16,7 @@ class BuildingRepository {
                 code = (data["code"] as? Long)?.toInt() ?: 0,
                 naverMapLat = data["naverMapLat"] as? Double ?: 0.0,
                 naverMapLng = data["naverMapLng"] as? Double ?: 0.0,
-                roomCount = (doc.reference.collection("rooms").get().await().size()),
+                rooms = (doc.reference.collection("rooms").get().await().size()),
                 imageUrl = data["imageUrl"] as? String ?: ""
             )
         }

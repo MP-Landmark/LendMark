@@ -34,4 +34,22 @@
         android:label="FindAccountFragment"
         tools:layout="@layout/fragment_find_account" />
 
+    <fragment
+        android:id="@+id/buildingListFragment"
+        android:name="com.example.lendmark.ui.building.BuildingListFragment"
+        android:label="건물 선택"
+        tools:layout="@layout/fragment_building_list">
+        <action
+            android:id="@+id/action_buildingList_to_roomList"
+            app:destination="@id/roomListFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/roomListFragment"
+        android:name="com.example.lendmark.ui.room.RoomListFragment"
+        android:label="강의실 목록"
+        tools:layout="@layout/fragment_room_list" />
+
+
+
 </navigation>
