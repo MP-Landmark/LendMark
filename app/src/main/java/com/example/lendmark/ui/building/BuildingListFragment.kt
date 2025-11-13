@@ -56,7 +56,7 @@ class BuildingListFragment : Fragment() {
 
     private fun loadBuildings() {
         db.collection("buildings")
-            .orderBy("code")   // 🔥 건물 번호 순으로 정렬
+            .orderBy("code")   // 건물 번호 순으로 정렬
             .get()
             .addOnSuccessListener { result ->
                 buildingList.clear()
@@ -64,7 +64,7 @@ class BuildingListFragment : Fragment() {
                 for (doc in result) {
                     val building = doc.toObject(Building::class.java)
 
-                    // 🔥 essential 필드 null 방지 — 앱 크래시 방지용
+                    // essential 필드 null 방지 — 앱 크래시 방지용
                     if (building.name.isNotEmpty() && building.code != 0) {
                         buildingList.add(building)
                     }

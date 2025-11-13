@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:orientation="vertical"
-    android:padding="16dp"
+    android:padding="18dp"
     android:background="@color/white"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -14,11 +14,11 @@
         android:id="@+id/tvTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="건물 선택"
-        android:textSize="20sp"
-        android:textStyle="bold"
+        android:text="Select Building"
+        android:textSize="19sp"
         android:textColor="#190848"
         android:gravity="center"
+        android:layout_marginTop="15dp"
         android:layout_marginBottom="16dp" />
 
     <!-- 건물 리스트 -->
@@ -26,6 +26,7 @@
         android:id="@+id/rvBuildingList"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_marginBottom="35dp"
         android:clipToPadding="false"
         android:paddingBottom="24dp"
         tools:listitem="@layout/item_building" />

@@ -4,9 +4,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="16dp"
+    android:layout_marginBottom="12dp"
     app:cardCornerRadius="16dp"
-    app:cardElevation="6dp"
+    app:cardElevation="0dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="#EEEEEE"
+    app:cardBackgroundColor="@color/white"
     android:clickable="true"
     android:foreground="?attr/selectableItemBackground">
 
@@ -14,18 +17,18 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp">
+        android:padding="13dp">
 
-        <!-- 건물 이미지 -->
+        <!-- Building Image -->
         <ImageView
             android:id="@+id/imgBuilding"
-            android:layout_width="72dp"
-            android:layout_height="72dp"
+            android:layout_width="75dp"
+            android:layout_height="75dp"
             android:scaleType="centerCrop"
             android:background="@drawable/bg_building_image_round"
-            android:contentDescription="건물 이미지" />
+            android:contentDescription="Building Image" />
 
-        <!-- 텍스트 영역 -->
+        <!-- Text Area -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -33,43 +36,49 @@
             android:layout_weight="1"
             android:paddingStart="16dp"
             android:gravity="center_vertical">
-
-
-            <TextView
-                android:id="@+id/tvBuildingCode"
+            
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="101"
-                android:textSize="13sp"
-                android:textColor="#6B7280" />
+                android:orientation="horizontal"
+                android:gravity="bottom">
 
-            <TextView
-                android:id="@+id/tvBuildingName"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="다산관"
-                android:textStyle="bold"
-                android:textSize="17sp"
-                android:textColor="#191919" />
+                <TextView
+                    android:id="@+id/tvBuildingName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Dasan Hall"
+                    android:textStyle="bold"
+                    android:textSize="17sp"
+                    android:textColor="#191919" />
+
+                <TextView
+                    android:id="@+id/tvBuildingCode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="(101)"
+                    android:textSize="12sp"
+                    android:textColor="#6B7280"
+                    android:layout_marginStart="4dp"/>
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvBuildingRooms"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="예약 가능한 강의실 12개"
-                android:textSize="14sp"
+                android:text="12 available classrooms"
+                android:textSize="13sp"
                 android:textColor="#6B7280"
                 android:layout_marginTop="4dp" />
 
-
         </LinearLayout>
 
-        <!-- 오른쪽 위치 아이콘 (원형 배경) -->
+        <!-- Location Icon -->
         <FrameLayout
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
             android:layout_gravity="center_vertical"
-            android:background="@drawable/bg_circle_gray">
+            android:background="@drawable/bg_rounded_light_purple">
 
             <ImageView
                 android:id="@+id/ivLocation"
@@ -77,10 +86,8 @@
                 android:layout_height="20dp"
                 android:layout_gravity="center"
                 android:src="@drawable/ic_location"
-                app:tint="#5A5A5A" />
+                app:tint="#190848" />
         </FrameLayout>
-
-
 
     </LinearLayout>
 

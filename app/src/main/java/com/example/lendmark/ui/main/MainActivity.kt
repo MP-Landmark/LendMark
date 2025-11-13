@@ -58,7 +58,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 R.id.nav_my -> {
                     replaceFragment(MyPageFragment())
-                    tvHeaderTitle.text = "마이페이지"
+                    tvHeaderTitle.text = "My Page"
                     true
                 }
                 else -> false
