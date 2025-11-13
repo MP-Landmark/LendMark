@@ -71,4 +71,9 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+    // Kakao Vector Map SDK (버전은 최신으로 교체 가능)
+    implementation("com.kakao.maps.open:android:2.13.0")
+    // 최신 버전
+    implementation("com.google.android.gms:play-services-location:21.3.0")
 }

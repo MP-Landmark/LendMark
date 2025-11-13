@@ -16,12 +16,6 @@
         android:orientation="horizontal"
         android:paddingHorizontal="16dp">
 
-        <!-- 왼쪽: 햄버거 메뉴 -->
-
-        <!-- 중앙: 타이틀 -->
-
-        <!-- 오른쪽: 알림 아이콘 -->
-
         <ImageButton
             android:id="@+id/btnMenu"
             android:layout_width="24dp"
@@ -30,6 +24,7 @@
             android:src="@drawable/ic_menu"
             android:tint="#190848" />
 
+        <!-- 중앙: 타이틀 -->
         <TextView
             android:id="@+id/tvHeaderTitle"
             android:layout_width="0dp"
@@ -41,6 +36,7 @@
             android:textSize="28sp"
             android:textStyle="bold" />
 
+        <!-- 오른쪽: 알림 아이콘 -->
         <ImageButton
             android:id="@+id/btnNotification"
             android:layout_width="24dp"

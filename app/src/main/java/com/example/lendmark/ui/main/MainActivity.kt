@@ -94,7 +94,7 @@ class MainActivity : AppCompatActivity() {
     fun openManageFavorites() {
         replaceFragment(ManageFavoritesFragment())
         tvHeaderTitle.text = "즐겨찾기 관리"
-    } //✅
+    }
 }
 
 

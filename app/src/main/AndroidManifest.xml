@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     package="com.example.lendmark">
 
+    <!-- 네트워크 -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+    <!-- 위치(정밀 권장) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+    <!-- ✅ Kakao Vector Map은 OpenGL ES 3.0+ 필요 -->
+    <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+
     <application
+        android:name="com.example.lendmark.ui.main.MyApp"
+        android:hardwareAccelerated="true"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -28,5 +40,10 @@
             android:exported="false"
             android:theme="@style/Theme.Lendmark" />
 
+        <!-- ❌ (권장) 지도 v2에서는 불필요하므로 제거
+        <meta-data
+            android:name="com.kakao.sdk.AppKey"
+            android:value="@string/kakao_native_app_key" />
+        -->
     </application>
 </manifest>
