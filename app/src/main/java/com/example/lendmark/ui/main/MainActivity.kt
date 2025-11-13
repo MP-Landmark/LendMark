@@ -12,6 +12,7 @@ import com.example.lendmark.ui.notification.NotificationListFragment
 import com.example.lendmark.ui.building.BuildingListFragment
 import com.example.lendmark.ui.reservation.ReservationMapFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.example.lendmark.ui.my.ManageFavoritesFragment //✅
 
 
 class MainActivity : AppCompatActivity() {
@@ -90,6 +91,10 @@ class MainActivity : AppCompatActivity() {
             .addToBackStack(null)
             .commit()
     }
+    fun openManageFavorites() {
+        replaceFragment(ManageFavoritesFragment())
+        tvHeaderTitle.text = "즐겨찾기 관리"
+    } //✅
 }
 
 
