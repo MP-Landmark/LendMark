@@ -3,6 +3,8 @@ package com.example.lendmark.ui.room
 import android.app.AlertDialog
 import android.graphics.Color
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -24,10 +26,7 @@ import kotlin.math.max
 import android.widget.Button
 import android.widget.Spinner
 import android.widget.ArrayAdapter
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.firebase.auth.FirebaseAuth
-
 
 class RoomScheduleFragment : Fragment() {
 
@@ -50,22 +49,22 @@ class RoomScheduleFragment : Fragment() {
 
     private val dayKeys = listOf("Mon", "Tue", "Wed", "Thu", "Fri")
     private val dayLabels = listOf("월", "화", "수", "목", "금")
+
+    // 각 칸에 대응되는 TextView
     private val cellViews = mutableMapOf<Pair<Int, Int>, TextView>()
+    private val cellState = mutableMapOf<Pair<Int, Int>, SlotState>()
 
     private data class SelectedRange(var day: Int, var start: Int, var end: Int)
     private var selectedRange: SelectedRange? = null
 
-    private val cellMap = mutableMapOf<Pair<Int, Int>, TextView>()
-    private val cellState = mutableMapOf<Pair<Int, Int>, SlotState>()
-
-
-
-
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         _binding = FragmentRoomScheduleBinding.inflate(inflater, container, false)
         return binding.root
     }
-
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         buildingId = arguments?.getString("buildingId") ?: ""
@@ -76,6 +75,12 @@ class RoomScheduleFragment : Fragment() {
 
         createGridTable()
         loadTimetable()
+
+        // 그리드 생성 후 예약 불러오기
+        Handler(Looper.getMainLooper()).post {
+            loadExistingReservations()
+        }
+
         updateSelectionInfo()
 
         binding.btnReserve.setOnClickListener {
@@ -139,7 +144,6 @@ class RoomScheduleFragment : Fragment() {
         grid.addView(tv)
     }
 
-
     private fun addTimeCell(row: Int, col: Int, text: String) {
         val tv = TextView(requireContext()).apply {
             this.text = text
@@ -161,20 +165,18 @@ class RoomScheduleFragment : Fragment() {
         return tv
     }
 
-
     // rowSpan 적용 가능
     private fun gridParam(row: Int, col: Int, rowSpan: Int): GridLayout.LayoutParams {
-        val rowSpec = GridLayout.spec(row, rowSpan)
+        var rowSpec = GridLayout.spec(row, rowSpan)
         val colSpec = GridLayout.spec(col, 1)
-        val params = GridLayout.LayoutParams(rowSpec, colSpec)
-        params.width = 0
-        params.height = dp(60)
-        params.columnSpec = colSpec
-        params.rowSpec = rowSpec
-        params.setGravity(Gravity.FILL)
-        return params
+        return GridLayout.LayoutParams(rowSpec, colSpec).apply {
+            width = 0
+            height = dp(60)
+            columnSpec = colSpec
+            rowSpec = rowSpec
+            setGravity(Gravity.FILL)
+        }
     }
-
 
     // ============================================================
     // 2) 수업(강의) 블록 배치 (rowSpan으로 병합)
@@ -210,11 +212,12 @@ class RoomScheduleFragment : Fragment() {
     private fun mergeClassBlock(day: Int, start: Int, end: Int, title: String) {
         val grid = binding.gridSchedule
 
-        // 기존 칸 삭제
+        // 기존 칸 숨기고 상태 CLASS로
         for (p in start..end) {
-            val v = cellViews[day to p] ?: continue
+            val key = day to p
+            val v = cellViews[key] ?: continue
             v.visibility = View.GONE
-            cellState[day to p] = SlotState.CLASS
+            cellState[key] = SlotState.CLASS
         }
 
         val rowStart = start + 1
@@ -230,13 +233,14 @@ class RoomScheduleFragment : Fragment() {
         grid.addView(tv, gridParam(rowStart, day + 1, span))
     }
 
-
     // ============================================================
     // 3) 셀 선택 로직
     // ============================================================
 
     private fun onCellClicked(day: Int, p: Int) {
-        if (cellState[day to p] == SlotState.CLASS) return
+        // 수업 중이거나 이미 예약된 칸은 선택 불가
+        val state = cellState[day to p]
+        if (state == SlotState.CLASS || state == SlotState.RESERVED) return
 
         val range = selectedRange
 
@@ -249,8 +253,10 @@ class RoomScheduleFragment : Fragment() {
                 val newStart = min(range.start, p)
                 val newEnd = max(range.end, p)
 
+                // 중간에 수업/예약이 끼어 있으면 확장 불가
                 for (i in newStart..newEnd) {
-                    if (cellState[day to i] == SlotState.CLASS) return
+                    val st = cellState[day to i]
+                    if (st == SlotState.CLASS || st == SlotState.RESERVED) return
                 }
 
                 range.start = newStart
@@ -266,27 +272,41 @@ class RoomScheduleFragment : Fragment() {
         updateSelectionInfo()
     }
 
-
     private fun clearSelection() {
         selectedRange = null
-        cellViews.forEach { (_, v) ->
-            v.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_cell_empty)
+        cellViews.forEach { (key, v) ->
+            val st = cellState[key]
+            // 수업/예약 칸은 건드리지 않음
+            if (st != SlotState.CLASS && st != SlotState.RESERVED) {
+                v.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_cell_empty)
+            }
         }
     }
 
     private fun applySelection() {
         val range = selectedRange ?: return
 
-        cellViews.forEach { (_, v) ->
-            v.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_cell_empty)
+        // 먼저 선택 가능 칸들만 비우기
+        cellViews.forEach { (key, v) ->
+            val st = cellState[key]
+            if (st != SlotState.CLASS && st != SlotState.RESERVED) {
+                v.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_cell_empty)
+            }
         }
 
+        // 선택 구간만 보라색으로
         for (p in range.start..range.end) {
-            val v = cellViews[range.day to p] ?: continue
-            v.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_cell_selected)
+            val key = range.day to p
+            val st = cellState[key]
+            if (st == SlotState.EMPTY || st == SlotState.SELECTED) {
+                val v = cellViews[key] ?: continue
+                v.background = ContextCompat.getDrawable(
+                    requireContext(),
+                    R.drawable.bg_cell_selected
+                )
+            }
         }
     }
-
 
     // ============================================================
     // 4) 선택 정보 표시
@@ -312,12 +332,12 @@ class RoomScheduleFragment : Fragment() {
         binding.btnReserve.isEnabled = true
     }
 
-
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
-
-    //“예약하기” 버튼 → 다이얼로그 띄우기
+    // ============================================================
+    // 5) 예약 다이얼로그
+    // ============================================================
 
     private fun openReservationDialog() {
         val dialogView = layoutInflater.inflate(R.layout.reservation_dialog, null)
@@ -326,27 +346,24 @@ class RoomScheduleFragment : Fragment() {
             .setView(dialogView)
             .create()
 
-
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
 
         val etUserName = dialogView.findViewById<EditText>(R.id.etUserName)
         val etMajor = dialogView.findViewById<EditText>(R.id.etMajor)
         val spPurpose = dialogView.findViewById<Spinner>(R.id.spPurpose)
         val etPeople = dialogView.findViewById<EditText>(R.id.etPeople)
-        val etPurposeCustom = dialogView.findViewById<EditText>(R.id.etPurposeCustom)   // ★★ 반드시 추가
+        val etPurposeCustom = dialogView.findViewById<EditText>(R.id.etPurposeCustom)
         val btnSubmit = dialogView.findViewById<Button>(R.id.btnSubmit)
         val btnCancel = dialogView.findViewById<Button>(R.id.btnCancel)
 
         // 현재 로그인한 사용자 정보 불러오기
         val uid = FirebaseAuth.getInstance().currentUser?.uid
-
         if (uid != null) {
             db.collection("users").document(uid).get()
                 .addOnSuccessListener { document ->
                     if (document != null) {
                         val name = document.getString("name") ?: ""
-                        val major = document.getString("department") ?: ""   // << 여기 수정!
-
+                        val major = document.getString("department") ?: ""
                         etUserName.setText(name)
                         etMajor.setText(major)
                     }
@@ -355,11 +372,20 @@ class RoomScheduleFragment : Fragment() {
 
         // ----------- 목적 드롭다운 -----------
         val items = listOf("스터디", "발표 준비", "미팅", "기타 (직접 입력)")
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_spinner_dropdown_item, items)
+        val adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            items
+        )
         spPurpose.adapter = adapter
 
         spPurpose.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
+            override fun onItemSelected(
+                parent: AdapterView<*>,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
                 val selected = items[position]
                 if (selected.contains("기타")) {
                     etPurposeCustom.visibility = View.VISIBLE
@@ -367,6 +393,7 @@ class RoomScheduleFragment : Fragment() {
                     etPurposeCustom.visibility = View.GONE
                 }
             }
+
             override fun onNothingSelected(parent: AdapterView<*>) {}
         }
 
@@ -374,7 +401,18 @@ class RoomScheduleFragment : Fragment() {
         btnSubmit.setOnClickListener {
             val name = etUserName.text.toString()
             val major = etMajor.text.toString()
-            val people = etPeople.text.toString()
+            val peopleStr = etPeople.text.toString()
+
+            if (name.isBlank() || major.isBlank() || peopleStr.isBlank()) {
+                Toast.makeText(requireContext(), "모든 정보를 입력해주세요.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val people = peopleStr.toIntOrNull()
+            if (people == null || people <= 0) {
+                Toast.makeText(requireContext(), "인원 수를 올바르게 입력해주세요.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
             val purpose = if (etPurposeCustom.visibility == View.VISIBLE) {
                 etPurposeCustom.text.toString()
@@ -382,8 +420,7 @@ class RoomScheduleFragment : Fragment() {
                 spPurpose.selectedItem.toString()
             }
 
-            // 저장 함수 호출
-            saveReservation(name, major, people.toInt(), purpose)
+            saveReservation(name, major, people, purpose)
             dialog.dismiss()
         }
 
@@ -392,9 +429,10 @@ class RoomScheduleFragment : Fragment() {
         dialog.show()
     }
 
+    // ============================================================
+    // 6) Firestore 저장
+    // ============================================================
 
-
-    //firestore 저장
     private fun saveReservation(
         userName: String,
         major: String,
@@ -421,40 +459,70 @@ class RoomScheduleFragment : Fragment() {
             .add(reservation)
             .addOnSuccessListener {
                 Toast.makeText(requireContext(), "예약 완료!", Toast.LENGTH_SHORT).show()
-
                 // 예약된 것을 시간표에 반영
                 applyReservationToTable(range.day, range.start, range.end)
-
             }.addOnFailureListener {
                 Toast.makeText(requireContext(), "오류 발생", Toast.LENGTH_SHORT).show()
             }
     }
 
-
-    //예약 완료 후 시간표에 ‘예약됨’ 표시
-
+    // 예약 완료 후 시간표에 ‘예약됨’ 표시
     private fun applyReservationToTable(day: Int, start: Int, end: Int) {
         for (p in start..end) {
-
-            val tv = cellMap[day to p] ?: continue
+            val key = day to p
+            val tv = cellViews[key] ?: continue
 
             tv.background = ContextCompat.getDrawable(
                 requireContext(),
                 R.drawable.bg_cell_selected
             )
-
             tv.text = "예약됨"
             tv.setTextColor(Color.BLACK)
 
-            cellState[day to p] = SlotState.SELECTED
-
+            cellState[key] = SlotState.RESERVED
             tv.setOnClickListener(null)
         }
     }
 
+    // ============================================================
+    // 7) Firestore에서 기존 예약 불러오기
+    // ============================================================
 
+    private fun loadExistingReservations() {
+        db.collection("reservations")
+            .whereEqualTo("buildingId", buildingId)
+            .whereEqualTo("roomId", roomId)
+            .get()
+            .addOnSuccessListener { result ->
+                for (doc in result) {
+                    val dayKey = doc.getString("day") ?: continue
+                    val dayIndex = dayKeys.indexOf(dayKey)
+                    if (dayIndex == -1) continue
 
+                    val start = doc.getLong("periodStart")?.toInt() ?: continue
+                    val end = doc.getLong("periodEnd")?.toInt() ?: continue
 
+                    // 시간표에 표시
+                    markReservationOnTable(dayIndex, start, end)
+                }
+            }
+    }
 
+    private fun markReservationOnTable(day: Int, start: Int, end: Int) {
+        for (p in start..end) {
+            val key = day to p
+            val tv = cellViews[key] ?: continue
 
+            tv.background = ContextCompat.getDrawable(
+                requireContext(),
+                R.drawable.bg_cell_selected
+            )
+            tv.text = "예약됨"
+            tv.setTextColor(Color.BLACK)
+
+            // 이미 예약된 칸은 클릭 불가
+            tv.setOnClickListener(null)
+            cellState[key] = SlotState.RESERVED
+        }
+    }
 }
