@@ -38,11 +38,12 @@ class NotificationDetailDialog(
                 isCancelled = false
             )
 
-            // Create and show the detailed dialog, passing a lambda for the cancel click
-            val detailDialog = ReservationDetailDialog(reservationData) { reservationId ->
-                // This callback would be handled by the parent fragment if needed
-                // For now, we just define it to satisfy the constructor
-            }
+            // Create and show the detailed dialog, passing all required parameters
+            val detailDialog = ReservationDetailDialog(
+                reservation = reservationData,
+                onCancelClick = { /* No action needed from notification dialog */ },
+                onRegisterClick = { /* No action needed from notification dialog */ }
+            )
             detailDialog.show(parentFragmentManager, "ReservationDetailDialog")
         }
 

@@ -4,7 +4,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.example.lendmark.R
@@ -20,7 +22,8 @@ data class Reservation(
     val attendees: Int,
     val purpose: String,
     var status: String, // Approved, Finished
-    var isCancelled: Boolean = false
+    var isCancelled: Boolean = false,
+    var infoRegistered: Boolean = false // New flag to track info registration
 )
 
 class MyReservationFragment : Fragment() {
@@ -52,12 +55,19 @@ class MyReservationFragment : Fragment() {
         binding.cardFinished.setOnClickListener { reservations.find { it.id == 3 }?.let { openDetailDialog(it) } }
 
         binding.btnCancelApproved.setOnClickListener { showCancelConfirmationDialog(1) }
+        
+        binding.btnRegisterInfo.setOnClickListener { 
+            val reservation = reservations.find { it.id == 3 }!!
+            showRegisterInfoDialog(reservation)
+        }
     }
 
     private fun openDetailDialog(reservation: Reservation) {
-        val dialog = ReservationDetailDialog(reservation) { reservationId ->
-            showCancelConfirmationDialog(reservationId)
-        }
+        val dialog = ReservationDetailDialog(
+            reservation = reservation,
+            onCancelClick = { reservationId -> showCancelConfirmationDialog(reservationId) },
+            onRegisterClick = { res -> showRegisterInfoDialog(res) } // Connect the new callback
+        )
         dialog.show(childFragmentManager, "ReservationDetailDialog")
     }
 
@@ -70,6 +80,15 @@ class MyReservationFragment : Fragment() {
             updateUI()
         }
         ConfirmCancelDialog(onConfirm).show(parentFragmentManager, "ConfirmCancelDialog")
+    }
+
+    private fun showRegisterInfoDialog(reservation: Reservation) {
+        val dialog = RegisterInfoDialog { selectedFeatures ->
+            reservation.infoRegistered = true
+            Toast.makeText(requireContext(), "Information registered!", Toast.LENGTH_SHORT).show()
+            updateUI()
+        }
+        dialog.show(parentFragmentManager, "RegisterInfoDialog")
     }
 
     private fun updateUI() {
@@ -85,7 +104,7 @@ class MyReservationFragment : Fragment() {
         }
         binding.cardApproved.visibility = if (card1ShouldBeVisible) View.VISIBLE else View.GONE
         updateCardStatus(res1, binding.tvStatusApproved)
-        updateButtonState(res1, binding.btnCancelApproved)
+        updateCancelButtonState(res1, binding.btnCancelApproved)
 
         // --- Reservation 3 (Originally Finished) ---
         val res3 = reservations.find { it.id == 3 }!!
@@ -97,6 +116,7 @@ class MyReservationFragment : Fragment() {
         }
         binding.cardFinished.visibility = if (card3ShouldBeVisible) View.VISIBLE else View.GONE
         updateCardStatus(res3, binding.tvStatusFinished)
+        updateRegisterButtonState(res3, binding.btnRegisterInfo)
     }
 
     private fun updateCardStatus(reservation: Reservation, statusView: TextView) {
@@ -111,7 +131,7 @@ class MyReservationFragment : Fragment() {
         statusView.setTextColor(ContextCompat.getColor(requireContext(), textColor))
     }
 
-    private fun updateButtonState(reservation: Reservation, button: MaterialButton) {
+    private fun updateCancelButtonState(reservation: Reservation, button: MaterialButton) {
         if (reservation.isCancelled || reservation.status == "Finished") {
             button.text = "Cancelled"
             button.isEnabled = false
@@ -122,6 +142,20 @@ class MyReservationFragment : Fragment() {
             button.isEnabled = true
             button.setTextColor(ContextCompat.getColor(requireContext(), R.color.red))
             button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.red)
+        }
+    }
+    
+    private fun updateRegisterButtonState(reservation: Reservation, button: Button) {
+        if (reservation.infoRegistered) {
+            button.text = "Classroom Info Registered"
+            button.isEnabled = false
+            button.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.gray_light)
+            button.setTextColor(ContextCompat.getColor(requireContext(), R.color.colorPrimary))
+        } else {
+            button.text = "Register Classroom Info"
+            button.isEnabled = true
+            button.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.colorPrimary)
+            button.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
         }
     }
 

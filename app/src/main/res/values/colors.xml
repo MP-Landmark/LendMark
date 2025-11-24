@@ -29,5 +29,6 @@
     <color name="text_primary">#212121</color>
     <color name="text_secondary">#757575</color>
     <color name="gray_dark">#424242</color>
+    <color name="gray_light">#F3F4F6</color>  <!-- Added this line -->
 
 </resources>

@@ -12,7 +12,8 @@ import com.example.lendmark.databinding.DialogReservationDetailBinding
 
 class ReservationDetailDialog(
     private val reservation: Reservation,
-    private val onCancelClick: (Int) -> Unit
+    private val onCancelClick: (Int) -> Unit,
+    private val onRegisterClick: (Reservation) -> Unit
 ) : DialogFragment() {
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -26,9 +27,18 @@ class ReservationDetailDialog(
         binding.tvAttendees.text = "${reservation.attendees} people"
         binding.tvPurpose.text = reservation.purpose
 
-        // Control button visibility and state based on status and cancellation flag
+        // --- CLICK LISTENERS ---
+        binding.btnClose.setOnClickListener { dismiss() } // Added this line
+
+        binding.btnCancel.setOnClickListener {
+            if (it.isEnabled) {
+                onCancelClick(reservation.id)
+                dismiss()
+            }
+        }
+
+        // --- BUTTON STATE LOGIC ---
         when {
-            // Case 1: Reservation was cancelled
             reservation.isCancelled -> {
                 binding.btnRegisterInfo.visibility = View.GONE
                 binding.btnCancel.visibility = View.VISIBLE
@@ -37,12 +47,26 @@ class ReservationDetailDialog(
                 binding.btnCancel.setTextColor(ContextCompat.getColor(requireContext(), R.color.gray))
                 binding.btnCancel.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.gray)
             }
-            // Case 2: Reservation is finished (and not cancelled)
             reservation.status == "Finished" -> {
                 binding.btnCancel.visibility = View.GONE
                 binding.btnRegisterInfo.visibility = View.VISIBLE
+
+                if (reservation.infoRegistered) {
+                    binding.btnRegisterInfo.text = "Classroom Info Registered"
+                    binding.btnRegisterInfo.isEnabled = false
+                    binding.btnRegisterInfo.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.gray_light)
+                    binding.btnRegisterInfo.setTextColor(ContextCompat.getColor(requireContext(), R.color.colorPrimary))
+                } else {
+                    binding.btnRegisterInfo.text = "Register Classroom Info"
+                    binding.btnRegisterInfo.isEnabled = true
+                    binding.btnRegisterInfo.backgroundTintList = ContextCompat.getColorStateList(requireContext(), R.color.colorPrimary)
+                    binding.btnRegisterInfo.setTextColor(ContextCompat.getColor(requireContext(), R.color.white))
+                    binding.btnRegisterInfo.setOnClickListener {
+                        onRegisterClick(reservation)
+                        dismiss()
+                    }
+                }
             }
-            // Case 3: Reservation is active (Approved)
             else -> {
                 binding.btnRegisterInfo.visibility = View.GONE
                 binding.btnCancel.visibility = View.VISIBLE
@@ -51,19 +75,6 @@ class ReservationDetailDialog(
                 binding.btnCancel.setTextColor(ContextCompat.getColor(requireContext(), R.color.red))
                 binding.btnCancel.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.red)
             }
-        }
-
-        // Set click listener for the active cancel button
-        binding.btnCancel.setOnClickListener {
-            if (it.isEnabled) { // Only trigger if the button is enabled
-                onCancelClick(reservation.id)
-                dismiss()
-            }
-        }
-
-        // Close button
-        binding.btnClose.setOnClickListener {
-            dismiss()
         }
 
         val dialog = AlertDialog.Builder(requireActivity())

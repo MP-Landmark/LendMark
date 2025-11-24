@@ -42,6 +42,9 @@ class HomeFragment : Fragment() {
         binding.recyclerFrequentlyUsed.layoutManager =
             LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 
+        binding.recyclerBuildingList.layoutManager = 
+            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+
         binding.tvSeeAllBuildings.setOnClickListener {
             activity?.findViewById<BottomNavigationView>(R.id.bottomNav)?.selectedItemId = R.id.nav_book
         }
@@ -73,7 +76,11 @@ class HomeFragment : Fragment() {
                         status = "Approved", 
                         isCancelled = false
                     )
-                    ReservationDetailDialog(dummyReservation) {}.show(parentFragmentManager, "ReservationDetailDialog")
+                    ReservationDetailDialog(
+                        reservation = dummyReservation,
+                        onCancelClick = { /* No action needed from home screen */ },
+                        onRegisterClick = { /* No action needed from home screen */ }
+                    ).show(parentFragmentManager, "ReservationDetailDialog")
                 }
 
             } else {
