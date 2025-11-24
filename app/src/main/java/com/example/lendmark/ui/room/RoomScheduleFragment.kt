@@ -238,39 +238,58 @@ class RoomScheduleFragment : Fragment() {
     // ============================================================
 
     private fun onCellClicked(day: Int, p: Int) {
-        // 수업 중이거나 이미 예약된 칸은 선택 불가
-        val state = cellState[day to p]
-        if (state == SlotState.CLASS || state == SlotState.RESERVED) return
+
+        // 이미 예약된 칸은 클릭 불가
+        if (cellState[day to p] == SlotState.CLASS ||
+            cellState[day to p] == SlotState.RESERVED) return
 
         val range = selectedRange
 
-        if (range == null || range.day != day) {
+        // 기존에 선택된 것이 없으면 새로 선택
+        if (range == null) {
+            selectedRange = SelectedRange(day, p, p)
+            applySelection()
+            updateSelectionInfo()
+            return
+        }
+
+        // 같은 칸을 다시 눌렀을 때 -> 선택 취소
+        if (range.day == day && range.start == p && range.end == p) {
+            clearSelection()
+            updateSelectionInfo()
+            return
+        }
+
+        // 다른 날이면 리셋 후 새로 선택
+        if (range.day != day) {
             clearSelection()
             selectedRange = SelectedRange(day, p, p)
-        } else {
-            if (p < range.start || p > range.end) {
+            applySelection()
+            updateSelectionInfo()
+            return
+        }
 
-                val newStart = min(range.start, p)
-                val newEnd = max(range.end, p)
+        // 연속 범위 확장
+        if (p < range.start || p > range.end) {
 
-                // 중간에 수업/예약이 끼어 있으면 확장 불가
-                for (i in newStart..newEnd) {
-                    val st = cellState[day to i]
-                    if (st == SlotState.CLASS || st == SlotState.RESERVED) return
-                }
-
-                range.start = newStart
-                range.end = newEnd
-
-            } else {
-                clearSelection()
-                selectedRange = SelectedRange(day, p, p)
+            // 중간에 수업이 껴있는지 검사
+            for (i in min(range.start, p)..max(range.end, p)) {
+                if (cellState[day to i] == SlotState.CLASS ||
+                    cellState[day to i] == SlotState.RESERVED) return
             }
+
+            range.start = min(range.start, p)
+            range.end = max(range.end, p)
+        } else {
+            // 눌렀는데 범위 안에 있음 → 단일 셀 취급하고 다시 선택
+            clearSelection()
+            selectedRange = SelectedRange(day, p, p)
         }
 
         applySelection()
         updateSelectionInfo()
     }
+
 
     private fun clearSelection() {
         selectedRange = null
@@ -474,7 +493,7 @@ class RoomScheduleFragment : Fragment() {
 
             tv.background = ContextCompat.getDrawable(
                 requireContext(),
-                R.drawable.bg_cell_selected
+                R.drawable.bg_cell_reserved
             )
             tv.text = "예약됨"
             tv.setTextColor(Color.BLACK)
@@ -513,10 +532,8 @@ class RoomScheduleFragment : Fragment() {
             val key = day to p
             val tv = cellViews[key] ?: continue
 
-            tv.background = ContextCompat.getDrawable(
-                requireContext(),
-                R.drawable.bg_cell_selected
-            )
+            tv.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_cell_reserved)
+
             tv.text = "예약됨"
             tv.setTextColor(Color.BLACK)
 
