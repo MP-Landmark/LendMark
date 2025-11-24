@@ -96,7 +96,7 @@
         android:layout_gravity="bottom"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="88dp"
+        android:layout_marginBottom="110dp"
         android:visibility="gone"
         tools:visibility="visible" />
 

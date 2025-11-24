@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp"
+    android:background="@drawable/bg_dialog_round">
+
+    <!-- 제목 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="예약 정보 입력"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#190848"
+        android:gravity="center"
+        android:layout_marginBottom="24dp" />
+
+    <!-- 예약자 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="예약자"
+        android:textColor="#4B5563"
+        android:textSize="13sp" />
+
+    <EditText
+        android:id="@+id/etUserName"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@drawable/bg_input"
+        android:hint="이름을 입력해주세요"
+        android:paddingHorizontal="12dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 학과 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="학과"
+        android:textColor="#4B5563"
+        android:textSize="13sp" />
+
+    <EditText
+        android:id="@+id/etMajor"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@drawable/bg_input"
+        android:hint="학과 입력"
+        android:paddingHorizontal="12dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- 예약 목적 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="예약 목적"
+        android:textColor="#4B5563"
+        android:textSize="13sp" />
+
+    <!-- 드롭다운 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@drawable/bg_input"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
+        android:layout_marginTop="4dp">
+
+        <Spinner
+            android:id="@+id/spPurpose"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            style="@style/Widget.AppCompat.Spinner.Underlined" />
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_arrow_down"
+            app:tint="#9CA3AF" />
+    </LinearLayout>
+
+    <!-- 기타 입력 -->
+    <EditText
+        android:id="@+id/etPurposeCustom"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@drawable/bg_input"
+        android:hint="직접 입력"
+        android:paddingHorizontal="12dp"
+        android:layout_marginTop="8dp"
+        android:visibility="gone"/>
+
+    <!-- 예약 인원 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="예약 인원"
+        android:textColor="#4B5563"
+        android:textSize="13sp"
+        android:layout_marginTop="16dp"/>
+
+    <EditText
+        android:id="@+id/etPeople"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@drawable/bg_input"
+        android:hint="인원을 입력해주세요"
+        android:paddingHorizontal="12dp"
+        android:inputType="number"/>
+
+    <!-- 버튼 영역 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="20dp">
+
+        <Button
+            android:id="@+id/btnSubmit"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="다음"
+            android:textColor="@android:color/white"
+            android:backgroundTint="#190848"/>
+
+        <Button
+            android:id="@+id/btnCancel"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:text="취소"
+            android:textColor="#190848"
+            android:backgroundTint="@android:color/white"/>
+    </LinearLayout>
+
+</LinearLayout>
