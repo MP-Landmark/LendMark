@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     android:background="@color/white"
+    android:orientation="vertical"
     android:padding="16dp"
     tools:context=".ui.room.RoomScheduleFragment">
 
@@ -40,16 +41,16 @@
 
         <!-- 선택 가능 -->
         <LinearLayout
-            android:orientation="horizontal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:gravity="center_vertical">
 
             <View
                 android:layout_width="14dp"
                 android:layout_height="14dp"
                 android:background="@drawable/bg_cell_empty"
-                android:layout_marginEnd="4dp"/>
+                android:layout_marginEnd="4dp" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -65,16 +66,16 @@
 
         <!-- 선택됨 -->
         <LinearLayout
-            android:orientation="horizontal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:gravity="center_vertical">
 
             <View
                 android:layout_width="14dp"
                 android:layout_height="14dp"
                 android:background="@drawable/bg_cell_selected"
-                android:layout_marginEnd="4dp"/>
+                android:layout_marginEnd="4dp" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -90,16 +91,16 @@
 
         <!-- 수업 중 -->
         <LinearLayout
-            android:orientation="horizontal"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
             android:gravity="center_vertical">
 
             <View
                 android:layout_width="14dp"
                 android:layout_height="14dp"
                 android:background="@drawable/bg_cell_class"
-                android:layout_marginEnd="4dp"/>
+                android:layout_marginEnd="4dp" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -111,50 +112,73 @@
 
     </LinearLayout>
 
-    <!-- 시간표 그리드 -->
-    <!-- 전체 스크롤 -->
+    <!-- 시간표 스크롤 영역 -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:paddingBottom="90dp"
+        android:clipToPadding="false">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <GridLayout
+            <!-- 우리가 코드에서 채우는 TableLayout -->
+            <TableLayout
+                android:id="@+id/tableLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:stretchColumns="1,2,3,4,5"
+                android:layout_marginTop="12dp"
+                android:background="@android:color/white" />
+
+            <androidx.gridlayout.widget.GridLayout
                 android:id="@+id/gridSchedule"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:columnCount="6"
-                android:rowCount="16"
-                android:useDefaultMargins="true"/>
+                app:columnCount="6"/>
 
         </LinearLayout>
     </ScrollView>
 
-
-    <!-- 선택 영역 UI -->
+    <!-- 선택 정보 + 예약 버튼 영역 -->
     <LinearLayout
         android:id="@+id/selectionContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="12dp"
+        android:layout_marginTop="8dp"
         android:background="@drawable/bg_rounded_gray"
         android:orientation="vertical"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="8dp">
+        android:padding="12dp">
 
-        <!-- 선택한 시간 표시 영역 넣을 곳 -->
+        <TextView
+            android:id="@+id/tvSelectedInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="선택된 시간이 없습니다."
+            android:textColor="#111827"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvSelectedDuration"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text=""
+            android:textColor="#6B7280"
+            android:textSize="12sp" />
+
     </LinearLayout>
 
-
-    <!-- 예약 버튼 -->
     <Button
         android:id="@+id/btnReserve"
         android:layout_width="match_parent"
         android:layout_height="48dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="95dp"
         android:text="예약하기"
         android:textSize="16sp"
         android:textColor="@android:color/white"

@@ -79,24 +79,7 @@
 //
 //  // 3-2) 누적용 메모리
 //  /**
-//   * @type {{
-//   *   [code: number]: {
-//   *     name: string;
-//   *     code: number;
-//   *     roomCount: number;
-//   *     imageUrl: string;
-//   *     naverMapLat: number;
-//   *     naverMapLng: number;
-//   *     timetable: {
-//   *       [room: string]: {
-//   *         schedule: any[];
-//   *         reviews: string[];
-//   *       };
-//   *     };
-//   *   };
-//   * }}
-//   */
-//  const buildings = {};
+
 //
 //
 //  // 3-3) 각 학과 문서 순회
