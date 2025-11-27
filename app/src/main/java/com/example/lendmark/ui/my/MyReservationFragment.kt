@@ -93,10 +93,19 @@ class MyReservationFragment : Fragment() {
 
         val inflater = LayoutInflater.from(requireContext())
         val filtered = when (binding.filterGroup.checkedChipId) {
-            R.id.filterApproved -> reservationList.filter { it.status == "approved" }
-            R.id.filterFinished -> reservationList.filter { it.status == "finished" || it.status == "canceled" }
+            R.id.filterApproved ->
+                reservationList.filter { it.status == "approved" }
+
+            R.id.filterFinished ->
+                reservationList.filter {
+                    it.status == "finished" ||
+                            it.status == "canceled" ||
+                            it.status == "expired"     // ← 여기가 핵심!
+                }
+
             else -> reservationList
         }
+
 
         if (filtered.isEmpty()) {
             addEmptyMessage(container)
@@ -124,36 +133,59 @@ class MyReservationFragment : Fragment() {
             resetCardToDefault(card)
 
             when (reservation.status) {
+
                 "approved" -> {
                     tvStatus.setTextColor(Color.WHITE)
                     tvStatus.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_status_green)
                     btnCancel.visibility = View.VISIBLE
                 }
+
                 "finished" -> {
                     tvStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.colorPrimary))
                     tvStatus.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_status_gray)
-                    btnRegisterInfo.visibility = View.VISIBLE
+                    btnRegisterInfo.visibility = View.VISIBLE   // ✔ 정보 등록 가능
                 }
+
+                "expired" -> {
+                    tvStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.gray))
+                    tvStatus.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_status_gray)
+                    btnRegisterInfo.visibility = View.GONE      // ❌ 등록 비활성
+                    btnCancel.visibility = View.GONE            // 취소도 불가
+                    setCardToCanceledState(card)               // 흐리게 처리
+                }
+
                 "canceled" -> {
-                    tvStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.colorPrimary))
+                    tvStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.gray))
                     tvStatus.background = ContextCompat.getDrawable(requireContext(), R.drawable.bg_status_gray)
                     setCardToCanceledState(card)
                 }
             }
 
+
             card.setOnClickListener {
+
                 ReservationDetailDialogFS(
                     reservation = reservation,
-                    onCancelClick = { 
+
+                    onCancelClick = {
                         ConfirmCancelDialog {
                             updateStatus(reservation.id, "canceled")
                         }.show(childFragmentManager, "ConfirmCancelDialog")
                     },
-                    onRegisterClick = { 
-                        // This is a placeholder. The actual registration happens in btnRegisterInfo's listener.
+
+                    onRegisterClick = {
+                        // ✔ 등록 가능한 상태인지 한 번 더 검사
+                        if (reservation.status == "finished") {
+                            val dialog = RegisterInfoDialog { features ->
+                                updateRoomFeatures(reservation.buildingId, reservation.roomId, features)
+                            }
+                            dialog.show(parentFragmentManager, "RegisterInfoDialog")
+                        }
                     }
+
                 ).show(childFragmentManager, "ReservationDetailDialogFS")
             }
+
 
             btnCancel.setOnClickListener { 
                 ConfirmCancelDialog {
