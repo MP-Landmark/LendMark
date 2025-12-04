@@ -1,8 +1,8 @@
 package com.example.lendmark.ui.chatbot
 
-import android.text.Html
+import android.graphics.Color
 import android.text.Spannable
-import android.text.SpannableString
+import android.text.SpannableStringBuilder
 import android.text.method.LinkMovementMethod
 import android.text.style.ClickableSpan
 import android.view.LayoutInflater
@@ -27,15 +27,14 @@ class ChatBotAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
-
         return if (viewType == TYPE_USER) {
-            val view = inflater.inflate(R.layout.item_chat_user, parent, false)
-            UserViewHolder(view)
+            UserViewHolder(inflater.inflate(R.layout.item_chat_user, parent, false))
         } else {
-            val view = inflater.inflate(R.layout.item_chat_ai, parent, false)
-            AiViewHolder(view)
+            AiViewHolder(inflater.inflate(R.layout.item_chat_ai, parent, false))
         }
     }
+
+    override fun getItemCount(): Int = messages.size
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         val msg = messages[position]
@@ -43,58 +42,67 @@ class ChatBotAdapter(
         if (holder is UserViewHolder) {
             holder.userMsg.text = msg.message
         } else if (holder is AiViewHolder) {
-            bindAiMessage(holder, msg.message)
+            bindAiText(holder, msg)
         }
     }
-
-    override fun getItemCount(): Int = messages.size
 
     fun addMessage(message: ChatMessage) {
         messages.add(message)
         notifyItemInserted(messages.size - 1)
     }
 
-    // -------------------- AI 메시지 처리 --------------------
-    private fun bindAiMessage(holder: AiViewHolder, rawText: String) {
-
-        //  파싱: <room id="101">101호 보기</room>
-        val pattern = Regex("<room id=\"(.*?)\">(.*?)</room>")
-        var spannable = SpannableString(rawText.replace(pattern, "$2"))
-
-        val matches = pattern.findAll(rawText).toList()
-
-        var offset = 0
-        matches.forEachIndexed { index, match ->
-
-            val roomId = match.groupValues[1]
-            val displayText = match.groupValues[2]
-
-            val startIndex = spannable.indexOf(displayText, offset)
-            val endIndex = startIndex + displayText.length
-            offset = endIndex
-
-            if (startIndex != -1) {
-                val clickable = object : ClickableSpan() {
-                    override fun onClick(widget: View) {
-                        onRoomClick(roomId)
-                    }
-                }
-
-                spannable.setSpan(
-                    clickable,
-                    startIndex,
-                    endIndex,
-                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
-                )
-            }
-        }
-
-        holder.aiMsg.text = spannable
-        holder.aiMsg.movementMethod = LinkMovementMethod.getInstance()
+    /** 🔥 bullet (- 105) 라인 제거 */
+    private fun removeAiBulletItems(answer: String): String {
+        return answer
+            .lines()
+            .filterNot { it.trim().matches(Regex("^[-•]\\s*\\d+.*$")) }
+            .joinToString("\n")
     }
 
+    /** 🔥 숫자만 남기기 — Firestore key와 동일하게 맞추기 위해 */
+    private fun normalizeRoomId(raw: String): String {
+        return raw.trim().replace(Regex("[^0-9]"), "")
+    }
 
-    // -------------------- ViewHolders --------------------
+    /** 🔥 예약하기 클릭 가능하게 구성 */
+    private fun bindAiText(holder: AiViewHolder, msg: ChatMessage) {
+
+        val rooms = msg.roomList?.map { normalizeRoomId(it) } ?: emptyList()
+        val cleanText = removeAiBulletItems(msg.message)
+
+        val builder = SpannableStringBuilder()
+        builder.append(cleanText.trim())
+        builder.append("\n\n")
+
+        rooms.forEach { roomId ->
+            if (roomId.isBlank()) return@forEach
+
+            builder.append("${roomId}호 ")
+
+            val start = builder.length
+            builder.append("예약하기")
+            val end = builder.length
+
+            val span = object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    onRoomClick(roomId)  // 🔥 이미 sanitize 완료된 값 전달
+                }
+
+                override fun updateDrawState(ds: android.text.TextPaint) {
+                    ds.color = Color.parseColor("#1E88E5")
+                    ds.isUnderlineText = false
+                }
+            }
+
+            builder.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            builder.append("\n")
+        }
+
+        holder.aiMsg.text = builder
+        holder.aiMsg.movementMethod = LinkMovementMethod.getInstance()
+        holder.aiMsg.highlightColor = Color.TRANSPARENT
+    }
+
     class UserViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val userMsg: TextView = itemView.findViewById(R.id.tvUserMessage)
     }

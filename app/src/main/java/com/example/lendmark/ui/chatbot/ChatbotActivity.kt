@@ -1,11 +1,9 @@
 package com.example.lendmark.ui.chatbot
 
-import android.app.AlertDialog
-import android.app.DatePickerDialog
-import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.Parcel
+import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.annotation.RequiresApi
@@ -17,16 +15,10 @@ import com.example.lendmark.R
 import com.example.lendmark.data.model.ChatMessage
 import com.example.lendmark.ui.room.RoomScheduleFragment
 import com.google.android.material.datepicker.CalendarConstraints
-import com.google.android.material.datepicker.DateValidatorPointForward
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.functions.FirebaseFunctions
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
-import java.util.Calendar
-
+import java.time.*
 
 class ChatBotActivity : AppCompatActivity() {
 
@@ -38,14 +30,17 @@ class ChatBotActivity : AppCompatActivity() {
     private lateinit var progressBar: ProgressBar
     private lateinit var tvDateSelector: TextView
 
+    private lateinit var selectorContainer: View
+    private lateinit var fragmentContainer: View
+
     private lateinit var adapter: ChatBotAdapter
     private val messages = mutableListOf<ChatMessage>()
 
     private val db = FirebaseFirestore.getInstance()
-    private val functions = FirebaseFunctions.getInstance()
-
-    private var timeList = mutableListOf<String>()
     private val buildingOptions = mutableListOf<BuildingOption>()
+    private val timeList = mutableListOf<String>()
+    private var selectedBuildingId = ""
+    private var selectedBuildingName = ""
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,8 +54,11 @@ class ChatBotActivity : AppCompatActivity() {
         loadBuildings()
         setupListeners()
 
-        tvDateSelector.text = LocalDate.now().toString()  // 오늘 날짜 기본
-        updateTimeSpinner(tvDateSelector.text.toString()) // 기본 시간 리스트
+        selectedBuildingId = intent.getStringExtra("buildingId") ?: ""
+        selectedBuildingName = intent.getStringExtra("buildingName") ?: ""
+
+        tvDateSelector.text = LocalDate.now().toString()
+        updateTimeSpinner(tvDateSelector.text.toString())
     }
 
     private fun initViews() {
@@ -71,17 +69,39 @@ class ChatBotActivity : AppCompatActivity() {
         btnAskAI = findViewById(R.id.btnAskAI)
         recyclerChat = findViewById(R.id.recyclerChat)
         progressBar = findViewById(R.id.progressBarAI)
+
+        selectorContainer = findViewById(R.id.selectorContainer)
+        fragmentContainer = findViewById(R.id.chatbotFragmentContainer)
     }
 
-    /* ---------------- Toolbar ---------------- */
     private fun setupToolbar() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        toolbar.setNavigationOnClickListener { finish() }
         supportActionBar?.title = "AI Assistant"
+
+        toolbar.setNavigationOnClickListener { handleBackPress() }
+    }
+
+    private fun handleBackPress() {
+        if (fragmentContainer.visibility == View.VISIBLE) {
+            // 예약 화면에서 챗봇 화면으로 복귀
+            fragmentContainer.visibility = View.GONE
+            selectorContainer.visibility = View.VISIBLE
+            recyclerChat.visibility = View.VISIBLE
+            supportFragmentManager.popBackStack()
+            supportActionBar?.title = "AI Assistant"
+        } else {
+            finish()
+        }
     }
 
     private fun openRoomSchedule(buildingId: String, buildingName: String, roomId: String) {
+        Log.e("OPEN_ROOM", "Open $buildingName $roomId")
+
+        selectorContainer.visibility = View.GONE
+        recyclerChat.visibility = View.GONE
+        fragmentContainer.visibility = View.VISIBLE
+
         val fragment = RoomScheduleFragment().apply {
             arguments = Bundle().apply {
                 putString("buildingId", buildingId)
@@ -92,213 +112,175 @@ class ChatBotActivity : AppCompatActivity() {
 
         supportFragmentManager.beginTransaction()
             .replace(R.id.chatbotFragmentContainer, fragment)
-            .addToBackStack(null)    // 뒤로가기 가능하게
+            .addToBackStack("chatbotRoom")
             .commit()
+
+        supportActionBar?.title = "$buildingName ${roomId}호"
     }
 
-
-    /* ---------------- RecyclerView ---------------- */
     private fun setupRecyclerView() {
         adapter = ChatBotAdapter(
             messages,
             onRoomClick = { roomId ->
-                val building = buildingOptions[spinnerBuilding.selectedItemPosition]
-                openRoomSchedule(building.id, building.name, roomId)
+                openRoomSchedule(selectedBuildingId, selectedBuildingName, roomId)
             }
         )
 
-        recyclerChat.adapter = adapter
         recyclerChat.layoutManager = LinearLayoutManager(this).apply {
             stackFromEnd = true
         }
+        recyclerChat.adapter = adapter
     }
-
-
-
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun showCuteDatePicker() {
-
-        val constraints = CalendarConstraints.Builder()
-            .setValidator(WeekendBlockValidator())
-            .build()
-
-        val datePicker = MaterialDatePicker.Builder.datePicker()
-            .setTitleText("날짜 선택")
-            .setCalendarConstraints(constraints)
-            .setSelection(MaterialDatePicker.todayInUtcMilliseconds())
-            .build()
-
-        datePicker.addOnPositiveButtonClickListener { selection ->
-            val cal = Calendar.getInstance().apply { timeInMillis = selection }
-            val year = cal.get(Calendar.YEAR)
-            val month = cal.get(Calendar.MONTH) + 1
-            val day = cal.get(Calendar.DAY_OF_MONTH)
-
-            val formatted = String.format("%04d-%02d-%02d", year, month, day)
-            tvDateSelector.text = formatted
-            updateTimeSpinner(formatted)
-        }
-
-        datePicker.show(supportFragmentManager, "cute_date_picker")
-    }
-
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun setupDatePicker() {
-        tvDateSelector.setOnClickListener {
-            showCuteDatePicker()
-        }
+        tvDateSelector.setOnClickListener { showDatePicker() }
     }
 
-
-
-
-    /* ---------------- Time Spinner ---------------- */
     @RequiresApi(Build.VERSION_CODES.O)
-    private fun updateTimeSpinner(selectedDate: String) {
-        timeList = mutableListOf()
+    private fun showDatePicker() {
+        val today = LocalDate.now()
+        val maxDate = today.plusDays(28)
 
-        val today = LocalDate.now().toString()
-        val now = LocalTime.now()
-
-        if (selectedDate == today) {
-
-            val currentHour = now.hour
-
-            if (currentHour < 18) {
-                timeList.add("지금 바로")
+        val validator = object : CalendarConstraints.DateValidator {
+            override fun isValid(date: Long): Boolean {
+                val d = Instant.ofEpochMilli(date).atZone(ZoneId.systemDefault()).toLocalDate()
+                return !(d.isBefore(today) || d.isAfter(maxDate) || d.dayOfWeek.value >= 6)
             }
-
-            for (h in 8..17) {
-                if (h > currentHour) timeList.add("${h}시")
-            }
-
-        } else {
-            for (h in 8..17) {
-                timeList.add("${h}시")
-            }
+            override fun describeContents() = 0
+            override fun writeToParcel(dest: Parcel, flags: Int) {}
         }
 
-        val adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_item,
-            timeList
-        )
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinnerTime.adapter = adapter
+        MaterialDatePicker.Builder.datePicker()
+            .setTitleText("날짜 선택")
+            .setSelection(MaterialDatePicker.todayInUtcMilliseconds())
+            .setCalendarConstraints(
+                CalendarConstraints.Builder().setValidator(validator).build()
+            )
+            .build()
+            .apply {
+                addOnPositiveButtonClickListener {
+                    val selectedDate = Instant.ofEpochMilli(it)
+                        .atZone(ZoneId.systemDefault()).toLocalDate()
+                    tvDateSelector.text = selectedDate.toString()
+                    updateTimeSpinner(selectedDate.toString())
+                }
+                show(supportFragmentManager, "datePicker")
+            }
     }
 
-    /* ---------------- Building Spinner ---------------- */
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun updateTimeSpinner(date: String) {
+        timeList.clear()
+        val today = LocalDate.now().toString()
+        val nowHour = LocalTime.now().hour
+
+        if (date == today) {
+            if (nowHour < 18) timeList.add("지금 바로")
+            for (h in 8..17) if (h > nowHour) timeList.add("${h}시")
+        } else {
+            for (h in 8..17) timeList.add("${h}시")
+        }
+
+        spinnerTime.adapter = ArrayAdapter(
+            this, android.R.layout.simple_spinner_item, timeList
+        ).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+    }
+
     private fun loadBuildings() {
         db.collection("buildings")
             .orderBy("code")
             .get()
             .addOnSuccessListener { snap ->
-
                 buildingOptions.clear()
-
                 for (doc in snap) {
                     val id = doc.id
-                    val name = doc.getString("name")
-                        ?: doc.getString("buildingName")
-                        ?: id
+                    val name = doc.getString("name") ?: id
                     buildingOptions.add(BuildingOption(id, name))
                 }
 
-                val names = buildingOptions.map { it.name }
-
-                val adapter = ArrayAdapter(
+                spinnerBuilding.adapter = ArrayAdapter(
                     this,
                     android.R.layout.simple_spinner_item,
-                    names
-                )
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-                spinnerBuilding.adapter = adapter
+                    buildingOptions.map { it.name }
+                ).apply {
+                    setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                }
             }
     }
 
-    /* ---------------- Button Listener ---------------- */
     @RequiresApi(Build.VERSION_CODES.O)
     private fun setupListeners() {
-        btnAskAI.setOnClickListener {
-            askAI()
-        }
+        btnAskAI.setOnClickListener { askAI() }
     }
 
-    /* ---------------- Ask AI ---------------- */
     @RequiresApi(Build.VERSION_CODES.O)
     private fun askAI() {
-
         val date = tvDateSelector.text.toString()
-        val timeLabel = spinnerTime.selectedItem.toString()
+        val timeText = spinnerTime.selectedItem?.toString() ?: return
 
-        val buildingPos = spinnerBuilding.selectedItemPosition
-        if (buildingPos == Spinner.INVALID_POSITION) {
+        val pos = spinnerBuilding.selectedItemPosition
+        require(pos != Spinner.INVALID_POSITION) {
             Toast.makeText(this, "건물을 선택하세요.", Toast.LENGTH_SHORT).show()
-            return
         }
 
-        val building = buildingOptions[buildingPos]
+        val building = buildingOptions[pos]
+        selectedBuildingId = building.id
+        selectedBuildingName = building.name
 
-        addUserMessage("$date $timeLabel 예약 가능한 ${building.name} 강의실 알려줘")
+        addUserMessage("$date $timeText 예약 가능한 ${building.name} 강의실 알려줘")
 
-        val hour = convertToHour(timeLabel)
+        val hour =
+            if (timeText == "지금 바로") LocalTime.now().hour
+            else timeText.replace("시", "").trim().toInt()
+
         requestAI(building.id, building.name, date, hour)
     }
 
-    /* "지금 바로" OR "13시" → hour 변환 */
-    @RequiresApi(Build.VERSION_CODES.O)
-    private fun convertToHour(timeLabel: String): Int {
-        return if (timeLabel == "지금 바로") {
-            LocalTime.now().hour
-        } else {
-            timeLabel.replace("시", "").trim().toInt()
-        }
-    }
-
-    /* ---------------- Chat UI ---------------- */
     private fun addUserMessage(text: String) {
-        val msg = ChatMessage(text, true)
-        adapter.addMessage(msg)
+        adapter.addMessage(ChatMessage(text, isUser = true))
         recyclerChat.scrollToPosition(adapter.itemCount - 1)
     }
 
-    private fun addAiMessage(text: String) {
-        val msg = ChatMessage(text, false)
-        adapter.addMessage(msg)
+    private fun addAiMessage(text: String, rooms: List<String>) {
+        adapter.addMessage(ChatMessage(text, rooms, isUser = false))
         recyclerChat.scrollToPosition(adapter.itemCount - 1)
     }
 
-    /* ---------------- Cloud Function ---------------- */
     private fun requestAI(buildingId: String, buildingName: String, date: String, hour: Int) {
-
         progressBar.visibility = View.VISIBLE
-
-        val data = hashMapOf(
-            "buildingId" to buildingId,
-            "buildingName" to buildingName,
-            "date" to date,
-            "hour" to hour
-        )
 
         FirebaseFunctions.getInstance("asia-northeast3")
             .getHttpsCallable("chatbotAvailableRoomsV2")
-            .call(data)
-            .addOnSuccessListener { result ->
+            .call(
+                hashMapOf(
+                    "buildingId" to buildingId,
+                    "buildingName" to buildingName,
+                    "date" to date,
+                    "hour" to hour
+                )
+            )
+            .addOnSuccessListener {
                 progressBar.visibility = View.GONE
-                val map = result.data as? Map<*, *>
-                val answer = map?.get("answer") as? String
-                    ?: "서버 응답이 올바르지 않습니다."
-                addAiMessage(answer)
+
+                val map = it.data as? Map<*, *> ?: return@addOnSuccessListener
+                val answer = map["answer"] as? String ?: ""
+                val rawRooms = map["rooms"]
+
+                val rooms: List<String> =
+                    if (rawRooms is List<*>) rawRooms.map { s -> s.toString() }
+                    else if (rawRooms is Map<*, *>) rawRooms.keys.map { key -> key.toString() }
+                    else emptyList()
+
+                addAiMessage(answer, rooms)
             }
             .addOnFailureListener { e ->
                 progressBar.visibility = View.GONE
-                addAiMessage("AI 응답 오류: ${e.message}")
+                addAiMessage("AI 요청 실패: ${e.message}", emptyList())
             }
     }
 
-    data class BuildingOption(
-        val id: String,
-        val name: String
-    )
+    data class BuildingOption(val id: String, val name: String)
 }

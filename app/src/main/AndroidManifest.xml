@@ -40,6 +40,9 @@
             android:exported="false"
             android:theme="@style/Theme.Lendmark" />
 
+
+
+
         <activity
             android:name=".ui.chatbot.ChatBotActivity"
             android:exported="false"

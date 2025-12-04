@@ -10,7 +10,7 @@ import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.lendmark.R
 import com.example.lendmark.databinding.FragmentHomeBinding
-import com.example.lendmark.ui.chatbot.ChatBotActivity
+import com.example.lendmark.ui.chatbot.*
 import com.example.lendmark.ui.home.adapter.AnnouncementAdapter
 import com.example.lendmark.ui.home.adapter.FrequentlyUsedRoomsAdapter
 import com.example.lendmark.ui.my.ReservationDetailDialogFS
