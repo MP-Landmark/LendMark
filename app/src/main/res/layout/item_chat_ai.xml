@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:gravity="start"
     android:padding="6dp">
 
     <TextView
@@ -13,16 +12,9 @@
         android:textColor="#000000"
         android:textSize="15sp"
         android:padding="12dp"
-        />
+        android:linksClickable="true"
+        android:autoLink="none"
+        android:clickable="true"
+        android:focusable="true" />
 
-    <LinearLayout
-        android:id="@+id/roomButtonContainer"
-        android:orientation="vertical"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="6dp"/>
-
-
-</LinearLayout>
-
-
+</FrameLayout>
