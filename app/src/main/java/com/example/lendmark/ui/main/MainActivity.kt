@@ -1,50 +1,189 @@
 package com.example.lendmark.ui.main
 
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
+import android.view.View
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.AppCompatButton
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import com.example.lendmark.R
 import com.example.lendmark.ui.building.BuildingListFragment
 import com.example.lendmark.ui.home.HomeFragment
+import com.example.lendmark.ui.auth.AuthActivity
 import com.example.lendmark.ui.my.ManageFavoritesFragment
 import com.example.lendmark.ui.my.MyPageFragment
 import com.example.lendmark.ui.notification.NotificationListFragment
 import com.example.lendmark.ui.reservation.ReservationMapFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 class MainActivity : AppCompatActivity() {
 
+    // Firebase
+    private lateinit var auth: FirebaseAuth
+    private lateinit var db: FirebaseFirestore
+
+    // Main UI
+    private lateinit var drawerLayout: DrawerLayout
     private lateinit var bottomNav: BottomNavigationView
     private lateinit var btnMenu: ImageButton
     private lateinit var btnNotification: ImageButton
     private lateinit var tvHeaderTitle: TextView
 
+    // Drawer UI
+    private lateinit var btnCloseDrawer: ImageButton
+    private lateinit var menuMyReservation: TextView
+    private lateinit var menuClassReservation: TextView
+    private lateinit var menuFavorites: TextView
+    private lateinit var btnLogout: AppCompatButton
+
+    // Profile UI in Drawer
+    private lateinit var tvUserName: TextView
+    private lateinit var tvUserEmail: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // 1. Firebase 인스턴스 초기화
+        auth = FirebaseAuth.getInstance()
+        db = FirebaseFirestore.getInstance()
+
+        // 2. 뷰 바인딩 및 초기화
+        initViews()
+
+        // 3. 사용자 정보 불러오기 (DB 연동)
+        loadUserData()
+
+        // 4. 리스너 설정
+        setupListeners()
+
+        if (savedInstanceState == null) {
+            replaceFragment(HomeFragment(), "LendMark", addToBackStack = false)
+        }
+    }
+
+    private fun initViews() {
+        drawerLayout = findViewById(R.id.drawerLayout)
         btnMenu = findViewById(R.id.btnMenu)
         btnNotification = findViewById(R.id.btnNotification)
         tvHeaderTitle = findViewById(R.id.tvHeaderTitle)
         bottomNav = findViewById(R.id.bottomNav)
 
-        // 백스택 변경(뒤로가기 등) 감지 리스너
+        // Drawer 레이아웃 내부 뷰 찾기
+        val drawerContent = findViewById<View>(R.id.drawerContent)
+        btnCloseDrawer = drawerContent.findViewById(R.id.btnCloseDrawer)
+        menuMyReservation = drawerContent.findViewById(R.id.menuMyReservation)
+        menuClassReservation = drawerContent.findViewById(R.id.menuClassReservation)
+        menuFavorites = drawerContent.findViewById(R.id.menuFavorites)
+        btnLogout = drawerContent.findViewById(R.id.btnLogout)
+
+        tvUserName = drawerContent.findViewById(R.id.tvUserName)
+        tvUserEmail = drawerContent.findViewById(R.id.tvUserEmail)
+    }
+
+    private fun loadUserData() {
+        val currentUser = auth.currentUser
+
+        if (currentUser == null) {
+            // 로그인이 되어있지 않다면 처리 (예: 로그인 화면으로 이동)
+            return
+        }
+
+        val uid = currentUser.uid
+
+        // Firestore: users -> uid 문서 가져오기
+        db.collection("users").document(uid)
+            .get()
+            .addOnSuccessListener { document ->
+                if (document != null && document.exists()) {
+                    // DB 필드명: name, email (스크린샷 기준)
+                    val name = document.getString("name") ?: "알 수 없음"
+                    val email = document.getString("email") ?: currentUser.email
+
+                    tvUserName.text = name
+                    tvUserEmail.text = email
+                } else {
+                    tvUserName.text = "정보 없음"
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("MainActivity", "Error fetching user data", e)
+                tvUserName.text = "오류 발생"
+            }
+    }
+
+    private fun setupListeners() {
+        // [메인] 햄버거 버튼 -> 드로어 열기
+        btnMenu.setOnClickListener {
+            // 메인 탭 화면일 때만 드로어 열기, 상세 화면이면 뒤로가기
+            if (supportFragmentManager.backStackEntryCount > 0) {
+                onBackPressedDispatcher.onBackPressed()
+            } else {
+                drawerLayout.openDrawer(GravityCompat.START)
+            }
+        }
+
+        // [드로어] 닫기 버튼
+        btnCloseDrawer.setOnClickListener {
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
+
+        // [드로어] 내 예약 클릭
+        menuMyReservation.setOnClickListener {
+            drawerLayout.closeDrawer(GravityCompat.START)
+            // 마이페이지로 이동 (또는 내 예약 프래그먼트)
+            bottomNav.selectedItemId = R.id.nav_my
+        }
+
+        // [드로어] 강의실 예약 클릭
+        menuClassReservation.setOnClickListener {
+            drawerLayout.closeDrawer(GravityCompat.START)
+            bottomNav.selectedItemId = R.id.nav_book
+        }
+
+        // [드로어] 즐겨찾기 관리 클릭
+        menuFavorites.setOnClickListener {
+            drawerLayout.closeDrawer(GravityCompat.START)
+            openManageFavorites()
+        }
+
+        // [드로어] 로그아웃
+        btnLogout.setOnClickListener {
+            auth.signOut()
+            Toast.makeText(this, "로그아웃 되었습니다.", Toast.LENGTH_SHORT).show()
+
+            // 로그인 화면으로 이동 후 스택 비우기
+            val intent = Intent(this, AuthActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+        }
+
+        // [메인] 알림 버튼
+        btnNotification.setOnClickListener {
+            replaceFragment(NotificationListFragment(), "Notifications")
+        }
+
+        // 백스택 변경 감지 (헤더 타이틀 및 아이콘 변경)
         supportFragmentManager.addOnBackStackChangedListener {
             updateUiAfterNavigation()
         }
 
-        if (savedInstanceState == null) {
-            // 초기 화면 설정
-            replaceFragment(HomeFragment(), "LendMark", addToBackStack = false)
-        }
-
+        // 바텀 네비게이션
         bottomNav.setOnItemSelectedListener { item ->
             val currentFragment = supportFragmentManager.findFragmentById(R.id.main_container)
 
-            // 현재 백스택이 없고(메인 탭 화면이고), 이미 선택된 탭을 다시 누른 경우 리로드 방지
+            // 현재 탭 재클릭 방지 (메인 화면일 때만)
             if (supportFragmentManager.backStackEntryCount == 0) {
                 val isSameTab = when(item.itemId) {
                     R.id.nav_home -> currentFragment is HomeFragment
@@ -56,7 +195,7 @@ class MainActivity : AppCompatActivity() {
                 if (isSameTab) return@setOnItemSelectedListener false
             }
 
-            // 탭 이동 시에는 쌓여있는 스택을 모두 비움
+            // 탭 이동 시 백스택 비우기
             supportFragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
 
             val (fragment, title) = when (item.itemId) {
@@ -67,77 +206,49 @@ class MainActivity : AppCompatActivity() {
                 else -> return@setOnItemSelectedListener false
             }
 
-            // 탭 전환은 백스택에 추가하지 않음 (루트 프래그먼트)
             replaceFragment(fragment, title, addToBackStack = false)
             true
         }
-
-        btnNotification.setOnClickListener {
-            replaceFragment(NotificationListFragment(), "Notifications")
-        }
     }
 
-    /**
-     * 프래그먼트 교체 함수
-     * @param fragment 이동할 프래그먼트
-     * @param title 헤더에 표시할 제목 (백스택 태그로도 사용됨)
-     * @param addToBackStack 뒤로가기 시 돌아올 수 있는지 여부 (상세 페이지는 true, 탭 전환은 false)
-     */
     fun replaceFragment(fragment: Fragment, title: String, addToBackStack: Boolean = true) {
-        // 1. 화면 전환 명령
         val transaction = supportFragmentManager.beginTransaction()
             .replace(R.id.main_container, fragment)
 
         if (addToBackStack) {
-            transaction.addToBackStack(title) // 제목을 백스택의 이름(Name)으로 저장
+            transaction.addToBackStack(title)
         }
-
         transaction.commit()
 
-        // 2. 제목 즉시 변경 (중요: 화면이 바뀌기 전에 제목부터 설정하여 딜레이/고정 현상 방지)
         tvHeaderTitle.text = title
-
-        // 3. 버튼 상태 즉시 업데이트 (선택 사항, updateUiAfterNavigation에서도 처리하지만 반응성을 위해)
-        if (addToBackStack) {
-            btnMenu.setImageResource(R.drawable.ic_arrow_back)
-            btnMenu.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
-        } else {
-            btnMenu.setImageResource(R.drawable.ic_menu)
-            btnMenu.setOnClickListener { /* TODO: Drawer open */ }
-        }
+        updateUiAfterNavigation()
     }
 
-    /**
-     * 뒤로가기(popBackStack) 등이 일어난 후 UI(제목, 버튼)를 동기화하는 함수
-     */
     private fun updateUiAfterNavigation() {
         val count = supportFragmentManager.backStackEntryCount
         val isSubPage = count > 0
 
         if (isSubPage) {
-            // 서브 페이지인 경우 (상세 화면)
+            // 상세 페이지 -> 뒤로가기 화살표
             btnMenu.setImageResource(R.drawable.ic_arrow_back)
-            btnMenu.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
-            // 백스택의 가장 위에 있는 항목(현재 화면)의 이름을 가져와서 제목으로 설정
             val currentEntry = supportFragmentManager.getBackStackEntryAt(count - 1)
             tvHeaderTitle.text = currentEntry.name
         } else {
-            // 메인 탭 화면인 경우 (루트 화면)
+            // 메인 페이지 -> 햄버거 메뉴
             btnMenu.setImageResource(R.drawable.ic_menu)
-            btnMenu.setOnClickListener { /* TODO: Drawer menu */ }
 
-            // 현재 떠있는 프래그먼트를 찾아서 제목 복구
+            // 현재 프래그먼트에 따라 타이틀 복구
             val currentFragment = supportFragmentManager.findFragmentById(R.id.main_container)
             tvHeaderTitle.text = when (currentFragment) {
                 is BuildingListFragment -> "Classroom Reservation"
                 is ReservationMapFragment -> "Map View"
                 is MyPageFragment -> "My Page"
                 is NotificationListFragment -> "Notifications"
-                else -> "LendMark" // HomeFragment 포함
+                else -> "LendMark"
             }
 
-            // 바텀 네비게이션 아이콘 상태 동기화
+            // 바텀 네비게이션 아이콘 동기화
             val selectedItem = when (currentFragment) {
                 is HomeFragment -> R.id.nav_home
                 is BuildingListFragment -> R.id.nav_book
@@ -156,16 +267,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onBackPressed() {
-        val currentFragment = supportFragmentManager.findFragmentById(R.id.main_container)
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START)
+            return
+        }
 
+        val currentFragment = supportFragmentManager.findFragmentById(R.id.main_container)
         if (supportFragmentManager.backStackEntryCount > 0) {
-            // 상세 페이지면 뒤로가기
             super.onBackPressedDispatcher.onBackPressed()
         } else if (currentFragment !is HomeFragment) {
-            // 메인 탭인데 홈이 아니면 홈으로 이동
             bottomNav.selectedItemId = R.id.nav_home
         } else {
-            // 홈이면 앱 종료
             super.onBackPressedDispatcher.onBackPressed()
         }
     }
