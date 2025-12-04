@@ -107,7 +107,7 @@ class NotificationViewModel : ViewModel() {
                         val diffStart = startDateTime - currentTime
                         val diffEnd = endDateTime - currentTime
 
-                        // 조건 1: 시작 30분 전
+                        // 🔔 조건 1: 시작 30분 전
                         if (diffStart > 0 && diffStart <= TimeUnit.MINUTES.toMillis(30)) {
                             val minsLeft = TimeUnit.MILLISECONDS.toMinutes(diffStart) + 1
                             newNotifications.add(
@@ -126,7 +126,7 @@ class NotificationViewModel : ViewModel() {
                             )
                         }
 
-                        // 조건 2: 종료 10분 전
+                        // 🔔 조건 2: 종료 10분 전
                         if (diffEnd > 0 && diffEnd <= TimeUnit.MINUTES.toMillis(10)) {
                             val minsLeft = TimeUnit.MILLISECONDS.toMinutes(diffEnd) + 1
                             newNotifications.add(
