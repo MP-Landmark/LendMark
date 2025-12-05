@@ -148,25 +148,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun replaceFragment(fragment: Fragment, title: String, addToBackStack: Boolean = true) {
+
         val transaction = supportFragmentManager.beginTransaction()
             .replace(R.id.main_container, fragment)
 
         if (addToBackStack) {
             transaction.addToBackStack(title)
         }
-        transaction.commit()
 
-        // [중요] 즉시 제목 업데이트 (비동기 딜레이 방지)
+        transaction.commitAllowingStateLoss()  // ← 변경!
+
         tvHeaderTitle.text = title
 
-        // [중요] 프래그먼트 교체 직후 UI 상태 강제 업데이트 (commit은 비동기라 약간 늦을 수 있음)
-        // 여기서는 버튼 아이콘만 즉시 변경해줍니다.
         val isHome = fragment is HomeFragment
-        if (!isHome || addToBackStack) {
-            btnMenu.setImageResource(R.drawable.ic_arrow_back)
-        } else {
-            btnMenu.setImageResource(R.drawable.ic_menu)
-        }
+        btnMenu.setImageResource(
+            if (isHome && !addToBackStack) R.drawable.ic_menu
+            else R.drawable.ic_arrow_back
+        )
     }
 
     // [핵심 수정] UI 상태 업데이트 로직 (제목 및 버튼 아이콘)
