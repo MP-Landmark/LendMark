@@ -208,39 +208,27 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateUiAfterNavigation() {
         val count = supportFragmentManager.backStackEntryCount
-        val currentFragment = supportFragmentManager.findFragmentById(R.id.main_container)
         val isSubPage = count > 0
-        val isHome = currentFragment is HomeFragment
 
-        if (isHome && !isSubPage) {
-            btnMenu.setImageResource(R.drawable.ic_menu)
-        } else {
-            btnMenu.setImageResource(R.drawable.ic_arrow_back)
-        }
+        // 1. 뒤로가기 버튼(메뉴 버튼) 아이콘 설정
+        // 메인 홈 화면이고 서브 페이지가 아닐 때만 '메뉴(햄버거)' 아이콘, 나머지는 '뒤로가기' 아이콘
+        val isHomeMain = (bottomNav.selectedItemId == R.id.nav_home) && !isSubPage
+        btnMenu.setImageResource(if (isHomeMain) R.drawable.ic_menu else R.drawable.ic_arrow_back)
 
         if (isSubPage) {
+            // 2. 서브 페이지(상세 화면)일 경우: 백스택에 저장된 이름(예: "Notifications")을 가져옴
             val currentEntry = supportFragmentManager.getBackStackEntryAt(count - 1)
             tvHeaderTitle.text = currentEntry.name
         } else {
-            tvHeaderTitle.text = when (currentFragment) {
-                is BuildingListFragment -> "Classroom Reservation"
-                is ReservationMapFragment -> "Map View"
-                is MyPageFragment -> "My Page"
-                is NotificationListFragment -> "Notifications"
-                is ManageFavoritesFragment -> "Manage Favorites"
-                else -> "LendMark"
+            // 3. 메인 탭 화면일 경우:
+            // 프래그먼트를 확인하지 않고, '현재 선택된 탭'을 기준으로 제목을 설정합니다.
+            // 이렇게 하면 탭 이동 중에 이전 화면의 제목이 뜨는 문제를 막을 수 있습니다.
+            tvHeaderTitle.text = when (bottomNav.selectedItemId) {
+                R.id.nav_book -> "Classroom Reservation"
+                R.id.nav_map -> "Map View"
+                R.id.nav_my -> "My Page"
+                else -> "LendMark" // Home 또는 그 외
             }
-        }
-
-        val selectedItem = when (currentFragment) {
-            is HomeFragment -> R.id.nav_home
-            is BuildingListFragment -> R.id.nav_book
-            is ReservationMapFragment -> R.id.nav_map
-            is MyPageFragment -> R.id.nav_my
-            else -> bottomNav.selectedItemId
-        }
-        if (bottomNav.selectedItemId != selectedItem) {
-            bottomNav.selectedItemId = selectedItem
         }
     }
 
