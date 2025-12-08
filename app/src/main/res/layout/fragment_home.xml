@@ -13,13 +13,13 @@
         android:clipToPadding="false">
 
         <LinearLayout
+            android:id="@+id/contentLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp"
             android:paddingBottom="96dp">
 
-            <!-- Search Bar with Chatbot -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -50,19 +50,33 @@
                     android:drawableStart="@drawable/ic_search"
                     android:drawablePadding="8dp"
                     android:hint="Search building"
+                    android:inputType="text"
+                    android:imeOptions="actionSearch"
+                    android:maxLines="1"
                     android:padding="12dp" />
 
             </RelativeLayout>
 
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerSearchResults"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="8dp"
+                android:background="#FFFFFF"
+                android:elevation="4dp"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
-            <!-- Announcement Section -->
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Announcement"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:layout_marginTop="24dp"/>
+                android:layout_marginTop="16dp"/>
+
             <androidx.viewpager2.widget.ViewPager2
                 android:id="@+id/viewPagerAnnouncements"
                 android:layout_width="match_parent"
@@ -70,7 +84,6 @@
                 android:layout_marginTop="8dp"/>
 
 
-            <!-- Frequently Used Rooms -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -84,8 +97,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"/>
 
-
-            <!-- ⭐ Recently Viewed Rooms -->
             <TextView
                 android:id="@+id/tvRecentlyViewedTitle"
                 android:layout_width="wrap_content"
@@ -94,27 +105,22 @@
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:layout_marginTop="24dp" />
-
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerRecentlyViewed"
                 android:layout_width="match_parent"
                 android:layout_height="80dp"
                 android:layout_marginTop="8dp" />
 
-
-            <!-- Building List Section -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp">
-
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Building List"
                     android:textSize="18sp"
                     android:textStyle="bold" />
-
                 <TextView
                     android:id="@+id/tvSeeAllBuildings"
                     android:layout_width="wrap_content"
@@ -122,7 +128,6 @@
                     android:text="See all >"
                     android:layout_alignParentEnd="true" />
             </RelativeLayout>
-
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerBuildingList"
                 android:layout_width="match_parent"
@@ -132,8 +137,6 @@
         </LinearLayout>
     </ScrollView>
 
-
-    <!-- Upcoming Reservation Floating View -->
     <include
         android:id="@+id/included_upcoming_reservation"
         layout="@layout/view_upcoming_reservation"
@@ -143,7 +146,6 @@
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="110dp"
-        android:visibility="gone"
-        tools:visibility="visible" />
+        android:visibility="gone" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

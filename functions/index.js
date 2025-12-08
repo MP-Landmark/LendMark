@@ -1,3 +1,6 @@
+/*******************************************************
+ * 0. 기본 의존성 & 초기화
+ *******************************************************/
 require("dotenv").config();
 const { onCall } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
@@ -8,34 +11,46 @@ const OpenAI = require("openai").default;
 
 admin.initializeApp();
 
-/* ======================================================
-   0. 공통 설정
-   ====================================================== */
-
-const REGION = "asia-northeast3";   // 필요하면 "asia-northeast3"로 통일해서 변경
+const REGION = "asia-northeast3";
 
 /* ======================================================
-   1. Email Verification
+   공통: 날짜 + 교시 → 시작/종료 Timestamp 계산
    ====================================================== */
+function buildStartEndTimestamp(dateStr, periodStart, periodEnd) {
+  // dateStr: "YYYY-MM-DD"
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const baseHour = 8; // 0교시 = 08시 기준
 
+  // 시작 시간: 8 + periodStart 시
+  const startDate = new Date(year, month - 1, day, baseHour + periodStart, 0, 0);
+  // 종료 시간: 8 + (periodEnd + 1) 시 (교시 끝나는 시각)
+  const endDate = new Date(year, month - 1, day, baseHour + periodEnd + 1, 0, 0);
+
+  return {
+    startAt: admin.firestore.Timestamp.fromDate(startDate),
+    endAt: admin.firestore.Timestamp.fromDate(endDate),
+  };
+}
+
+
+/*******************************************************
+ * 1. 이메일 인증
+ *******************************************************/
 const gmailUser = process.env.GMAIL_USER;
 const gmailPass = process.env.GMAIL_PASS;
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
-  auth: {
-    user: gmailUser,
-    pass: gmailPass,
-  },
+  auth: { user: gmailUser, pass: gmailPass },
 });
 
-/** 1-1. 인증코드 발송 */
+// 1-1 이메일 인증코드 발송
 exports.sendVerificationCode = onCall({ region: "us-central1" }, async (req) => {
   const email = (req.data?.email || "").trim().toLowerCase();
   if (!email) throw new Error("Missing email");
 
   const code = String(Math.floor(100000 + Math.random() * 900000));
-  const expiresAt = Date.now() + 10 * 60 * 1000; // 10분
+  const expiresAt = Date.now() + 10 * 60 * 1000;
 
   await admin.firestore()
     .collection("email_verifications")
@@ -49,9 +64,9 @@ exports.sendVerificationCode = onCall({ region: "us-central1" }, async (req) => 
     html: `
       <div style="font-family:sans-serif;">
         <h2>Welcome to LendMark!</h2>
-        <p>Please enter the authentication code below in the app:</p>
+        <p>Please enter the authentication code below:</p>
         <h1 style="letter-spacing:4px;">${code}</h1>
-        <p>Valid time: 10 minutes</p>
+        <p>Valid for 10 minutes.</p>
       </div>
     `,
   });
@@ -59,10 +74,10 @@ exports.sendVerificationCode = onCall({ region: "us-central1" }, async (req) => 
   return { ok: true };
 });
 
-/** 1-2. 인증코드 검증 */
+// 1-2 인증코드 검증
 exports.verifyEmailCode = onCall({ region: "us-central1" }, async (req) => {
   const email = (req.data?.email || "").trim().toLowerCase();
-  const code = (req.data?.code || "").toString().trim();
+  const code = (req.data?.code || "").trim();
 
   const snap = await admin.firestore()
     .collection("email_verifications")
@@ -72,7 +87,6 @@ exports.verifyEmailCode = onCall({ region: "us-central1" }, async (req) => {
   if (!snap.exists) return { ok: false, reason: "NOT_FOUND" };
 
   const { code: saved, expiresAt } = snap.data();
-
   if (Date.now() > expiresAt) return { ok: false, reason: "EXPIRED" };
   if (saved !== code) return { ok: false, reason: "INVALID" };
 
@@ -80,11 +94,13 @@ exports.verifyEmailCode = onCall({ region: "us-central1" }, async (req) => {
   return { ok: true };
 });
 
-/* ======================================================
-   2. 예약 상태 관리 (Scheduler)
-   ====================================================== */
 
-/** 2-1. 매 30분마다 지난 예약 finished 처리 */
+
+/*******************************************************
+ * 2. 예약 상태 자동 업데이트
+ *******************************************************/
+
+// 2-1 지난 예약 finished 처리 (30분마다 실행)
 exports.finishPastReservations = onSchedule(
   { schedule: "every 30 minutes", region: REGION },
   async () => {
@@ -101,69 +117,55 @@ exports.finishPastReservations = onSchedule(
       .where("status", "==", "approved")
       .get();
 
-    if (snapshot.empty) {
-      logger.info("finishPastReservations: no approved reservations.");
-      return null;
-    }
-
     const batch = db.batch();
 
     snapshot.forEach((doc) => {
       const r = doc.data();
-      const dateStr = r.date; // "YYYY-MM-DD"
-      const periodEnd = r.periodEnd; // 예: 0,1,2...
-
-      const endHour = 8 + (periodEnd + 1); // 8시 + (끝교시+1)
-      const nowHour = now.getHours();
+      const dateStr = r.date;
+      const endHour = 8 + (r.periodEnd + 1);
 
       if (dateStr < todayStr) {
         batch.update(doc.ref, { status: "finished" });
-      } else if (dateStr === todayStr && nowHour >= endHour) {
+      } else if (dateStr === todayStr && now.getHours() >= endHour) {
         batch.update(doc.ref, { status: "finished" });
       }
     });
 
     await batch.commit();
     logger.info("finishPastReservations: done");
-    return null;
   }
 );
 
-/** 2-2. 매일 00시, finished 후 1주 지난 예약 expired 처리 */
+// 2-2 finished 후 1주 지난 예약 expired 처리
 exports.expireOldReservations = onSchedule(
   { schedule: "every day 00:00", region: REGION },
   async () => {
     const db = admin.firestore();
-    const now = Date.now();
-    const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
-    const snapshot = await db
+    const snap = await db
       .collection("reservations")
       .where("status", "==", "finished")
       .where("timestamp", "<", oneWeekAgo)
       .get();
 
-    if (snapshot.empty) {
-      logger.info("expireOldReservations: nothing to expire.");
-      return null;
-    }
-
     const batch = db.batch();
-    snapshot.forEach((doc) => batch.update(doc.ref, { status: "expired" }));
+    snap.forEach((doc) => batch.update(doc.ref, { status: "expired" }));
     await batch.commit();
 
-    logger.info(
-      `expireOldReservations: expired ${snapshot.size} old reservations.`
-    );
-    return null;
+    logger.info(`expireOldReservations: expired ${snap.size}`);
   }
 );
 
-/* ======================================================
-   3. 예약 생성 (충돌 검사 포함)
-   ====================================================== */
 
+
+/* ======================================================
+   3. 예약 생성 (충돌 검사 + startAt/endAt + 알림 스케줄)
+   ====================================================== */
 exports.createReservation = onCall({ region: REGION }, async (req) => {
+
+  console.log("REQ DATA =", req.data);
+
   const db = admin.firestore();
 
   const {
@@ -175,12 +177,12 @@ exports.createReservation = onCall({ region: REGION }, async (req) => {
     buildingId,
     roomId,
     day,
-    date,
-    periodStart,
-    periodEnd,
+    date,        // "YYYY-MM-DD"
+    periodStart, // 숫자 (0 = 08시, 1 = 09시 ...)
+    periodEnd,   // 숫자
   } = req.data;
 
-  // 3-1. 시간 충돌 체크
+  /* 3-1. 시간 충돌 체크 (기존 로직 그대로) */
   const snap = await db
     .collection("reservations")
     .where("buildingId", "==", buildingId)
@@ -200,7 +202,15 @@ exports.createReservation = onCall({ region: REGION }, async (req) => {
     }
   }
 
-  // 3-2. 예약 저장
+  /* 3-2. startAt / endAt 계산 */
+
+  const ps = Number(periodStart);
+  const pe = Number(periodEnd);
+  const { startAt, endAt } = buildStartEndTimestamp(date, ps, pe);
+  console.log("startAt=", startAt.toDate(), "endAt=", endAt.toDate());
+
+
+  /* 3-3. 예약 저장 */
   const newReservation = {
     userId,
     userName,
@@ -213,159 +223,142 @@ exports.createReservation = onCall({ region: REGION }, async (req) => {
     date,
     periodStart,
     periodEnd,
+    startAt,   // ← 새로 추가
+    endAt,     // ← 새로 추가
     timestamp: Date.now(),
     status: "approved",
   };
 
-  await db.collection("reservations").add(newReservation);
+  const reservationRef = await db.collection("reservations").add(newReservation);
+
+  /* 3-4. 유저 FCM 토큰 조회 */
+  const userDoc = await db.collection("users").doc(userId).get();
+  const fcmToken = userDoc.get("fcmToken");
+
+  // 토큰이 없으면 예약까지만 하고 끝
+  if (!fcmToken) {
+    logger.warn(`createReservation: no fcmToken for user ${userId}`);
+    return { success: true, warning: "NO_FCM_TOKEN" };
+
+  }
+
+  console.log("Saved reservation:", newReservation);
+
+
+  /* 3-5. 알림 시간 계산 (시작 30분 전 / 종료 10분 전) */
+  const startDate = startAt.toDate();
+  const endDate = endAt.toDate();
+
+  const startMinus30 = new Date(startDate.getTime() - 30 * 60 * 1000);
+  const endMinus10 = new Date(endDate.getTime() - 10 * 60 * 1000);
+
+  const sendAtStart = admin.firestore.Timestamp.fromDate(startMinus30);
+  const sendAtEnd = admin.firestore.Timestamp.fromDate(endMinus10);
+
+  /* 3-6. scheduled_notifications 컬렉션에 스케줄 2개 저장 */
+
+  // ① 시작 30분 전 알림
+  await db.collection("scheduled_notifications").add({
+    userId,
+    reservationId: reservationRef.id,
+    token: fcmToken,
+    title: "예약 시작 30분 전 알림",
+    body: `${buildingId} ${roomId} 예약이 30분 뒤에 시작됩니다.`,
+    sendAt: sendAtStart,
+    sent: false,
+    type: "start",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  // ② 종료 10분 전 알림
+  await db.collection("scheduled_notifications").add({
+    userId,
+    reservationId: reservationRef.id,
+    token: fcmToken,
+    title: "예약 종료 10분 전 알림",
+    body: `${buildingId} ${roomId} 예약 종료까지 10분 남았습니다.`,
+    sendAt: sendAtEnd,
+    sent: false,
+    type: "end",
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
   return { success: true };
 });
 
-/* ======================================================
-   4. AI Assistant – 사용 가능한 강의실 조회
-   ====================================================== */
 
+
+
+/*******************************************************
+ * 5. AI 강의실 추천
+ *******************************************************/
 exports.chatbotAvailableRoomsV2 = onCall({ region: REGION }, async (req) => {
   try {
-    // OpenAI API 불러오기
     const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY || process.env.openai_key || process.env.openai?.key,
+      apiKey: process.env.OPENAI_API_KEY,
     });
 
     const { buildingId, buildingName, date, hour } = req.data;
-
-    if (!buildingId) throw new Error("buildingId missing");
-    if (!buildingName) throw new Error("buildingName missing");
-    if (!date) throw new Error("date missing (YYYY-MM-DD)");
-    if (hour === undefined) throw new Error("hour missing (0~23)");
-
-    /* ============================================================
-       ⭐ 0) 예약 가능 시간 범위 체크
-       ============================================================ */
-    if (hour < 8 || hour >= 18) {
-      return {
-        ok: true,
-        answer: `지금 선택하신 ${hour}시는 예약이 불가능한 시간입니다.
-강의실 예약은 매일 오전 08시부터 오후 18시까지만 가능합니다.`,
-        rooms: [],
-      };
-    }
+    if (!buildingId || !buildingName || !date || hour === undefined)
+      throw new Error("Missing required fields");
 
     const db = admin.firestore();
 
-    /* ============================================================
-       1) hour → 교시(period) 변환
-       ============================================================ */
-    function hourToPeriod(h) {
-      return h - 8; // 08:00 = 0, 09:00 = 1 …
-    }
-    const targetPeriod = hourToPeriod(hour);
+    const targetPeriod = hour - 8;
+    const dayCode = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
+      new Date(date).getDay()
+    ];
 
-    /* ============================================================
-       2) date → 요일 변환 (Sun, Mon, Tue …)
-       ============================================================ */
-    function getDayCode(dateStr) {
-      const d = new Date(dateStr);
-      return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
-    }
-    const targetDay = getDayCode(date);
-
-    /* ============================================================
-       3) building timetable 불러오기
-       ============================================================ */
     const buildingDoc = await db.collection("buildings").doc(buildingId).get();
-
-    if (!buildingDoc.exists) throw new Error("Building not found");
-
     const timetable = buildingDoc.get("timetable") ?? {};
 
-    /* ============================================================
-       4) 예약 데이터(period 기반)
-       ============================================================ */
-    const reservationSnap = await db
-      .collection("reservations")
+    const reservationSnap = await db.collection("reservations")
       .where("buildingId", "==", buildingId)
       .where("date", "==", date)
       .where("status", "==", "approved")
       .get();
 
-    const reservationEvents = reservationSnap.docs.map((doc) => {
-      const r = doc.data();
-      return {
-        roomId: r.roomId,
-        periodStart: r.periodStart,
-        periodEnd: r.periodEnd,
-      };
-    });
+    const reservations = reservationSnap.docs.map((d) => d.data());
 
-    /* ============================================================
-       5) 사용 가능 여부 체크
-       ============================================================ */
-    function isRoomAvailable(roomId, roomData) {
-      // (A) 정규수업
-      if (roomData?.schedule) {
-        for (const ev of roomData.schedule) {
-          if (ev.day !== targetDay) continue;
-
-          const s = ev.periodStart;
-          const e = ev.periodEnd;
-
-          const overlapped = !(targetPeriod < s || targetPeriod > e);
-          if (overlapped) return false;
+    // 강의실 체크 함수
+    function isAvailable(roomId, roomData) {
+      // (A) 수업 중인지
+      for (const ev of roomData?.schedule ?? []) {
+        if (ev.day === dayCode) {
+          if (!(targetPeriod < ev.periodStart || targetPeriod > ev.periodEnd))
+            return false;
         }
       }
 
-      // (B) 학생 예약
-      for (const r of reservationEvents) {
-        if (r.roomId !== roomId) continue;
-
-        const s = r.periodStart;
-        const e = r.periodEnd;
-
-        const overlapped = !(targetPeriod < s || targetPeriod > e);
-        if (overlapped) return false;
+      // (B) 예약 중인지
+      for (const r of reservations) {
+        if (r.roomId === roomId) {
+          if (!(targetPeriod < r.periodStart || targetPeriod > r.periodEnd))
+            return false;
+        }
       }
 
       return true;
     }
 
-    /* ============================================================
-       6) 사용 가능한 강의실 목록 추출
-       ============================================================ */
     const availableRooms = Object.entries(timetable)
-      .filter(([roomId, roomData]) => isRoomAvailable(roomId, roomData))
+      .filter(([roomId, roomData]) => isAvailable(roomId, roomData))
       .map(([roomId]) => roomId);
 
-    logger.info("Available rooms:", availableRooms);
-
-    /* ============================================================
-       7) 강의실 목록 예쁘게 포맷팅
-       ============================================================ */
     const prettyList =
       availableRooms.length > 0
         ? availableRooms.map((r) => `- ${r}`).join("\n")
         : "없음";
 
-    /* ============================================================
-       8) OpenAI 자연어 응답 생성
-       ============================================================ */
     const prompt = `
-너는 서울과학기술대학교 강의실 예약 도우미 AI야.
+날짜: ${date}
+시간: ${hour}시
+건물: ${buildingName}
 
-- 날짜: ${date}
-- 시간: ${hour}시
-- 건물: ${buildingName}
-
-해당 시간에 사용 가능한 강의실 목록은 다음과 같아:
-
+가능한 강의실 목록:
 ${prettyList}
 
-학생이 보기 쉽도록:
-• 줄바꿈 유지
-• 불렛포인트 형식 유지
-• 자연스럽고 친절한 한 단락 설명
-
-이 기준을 지켜서 답변해줘.
+학생이 이해하기 쉽게 자연스럽게 설명해줘.
 `;
 
     const completion = await openai.chat.completions.create({
@@ -373,11 +366,13 @@ ${prettyList}
       messages: [{ role: "user", content: prompt }],
     });
 
-    const answer = completion.choices[0].message.content;
-
-    return { ok: true, answer, rooms: availableRooms };
+    return {
+      ok: true,
+      answer: completion.choices[0].message.content,
+      rooms: availableRooms,
+    };
   } catch (err) {
-    logger.error("chatbotAvailableRoomsV2 error:", err);
+    logger.error(err);
     return { ok: false, error: err.message };
   }
 });

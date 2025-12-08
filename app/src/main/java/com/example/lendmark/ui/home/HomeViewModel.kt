@@ -226,5 +226,48 @@ class HomeViewModel : ViewModel() {
         return String.format("%02d:00", hour)
     }
 
+    // 검색 결과를 담을 LiveData 추가
+    private val _searchResults = MutableLiveData<List<String>>()
+    val searchResults: LiveData<List<String>> = _searchResults
 
+
+    // ---------------------------------------------------------
+    // 4. 건물 검색 기능 (SEARCH)
+    // ---------------------------------------------------------
+    fun searchBuilding(query: String) {
+        val cleanQuery = query.trim()
+
+        if (cleanQuery.isEmpty()) {
+            _searchResults.value = emptyList()
+            return
+        }
+
+
+        // 'buildings' 컬렉션의 모든 문서를 가져옴
+        db.collection("buildings")
+            .get()
+            .addOnSuccessListener { result ->
+                val matchedList = mutableListOf<String>()
+
+                for (document in result.documents) {
+                    // 1. 문서 안의 "name" 필드 값을 가져옵니다 (예: "Frontier Hall")
+                    val buildingName = document.getString("name")
+
+                    // 2. name 값이 존재하고, 검색어(query)를 포함하는지 확인 (대소문자 무시)
+                    // 예: "Frontier Hall" 안에 "frontier"가 포함되어 있으면 통과
+                    if (buildingName != null && buildingName.contains(cleanQuery, ignoreCase = true)) {
+                        matchedList.add(buildingName)
+                    }
+                }
+
+                // 결과 리스트 업데이트
+                _searchResults.value = matchedList
+            }
+            .addOnFailureListener {
+                _searchResults.value = emptyList()
+            }
+    }
+    fun clearSearchResults() {
+        _searchResults.value = emptyList()
+    }
 }

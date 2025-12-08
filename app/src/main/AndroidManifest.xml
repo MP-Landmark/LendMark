@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.lendmark">
 
+    <!-- 인앱알림 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
     <!-- 네트워크 -->
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
@@ -25,6 +28,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Lendmark">
 
+        <service
+            android:name=".fcm.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+
         <activity
             android:name=".ui.main.MainActivity"
             android:exported="true"
@@ -39,9 +51,6 @@
             android:name=".ui.auth.AuthActivity"
             android:exported="false"
             android:theme="@style/Theme.Lendmark" />
-
-
-
 
         <activity
             android:name=".ui.chatbot.ChatBotActivity"

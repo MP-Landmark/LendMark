@@ -78,7 +78,30 @@ class MyReservationFragment : Fragment() {
                                 purpose = doc.getString("purpose") ?: "",
                                 status = doc.getString("status") ?: "approved"
                             )
-                        }.sortedByDescending { it.date }
+                        }
+                            // 정렬 로직 개선
+                            // 1순위: 상태 (Approved가 무조건 위, 나머지는 아래)
+                            // 2순위: Approved 내부에서는 날짜/시간이 빠른 순서 (오름차순: 15시 -> 16시)
+                            // 3순위: Finished 내부에서는 날짜/시간이 느린 순서 (내림차순: 최근 기록이 위로)
+                            .sortedWith(Comparator { r1, r2 ->
+                                val isR1Approved = r1.status == "approved"
+                                val isR2Approved = r2.status == "approved"
+
+                                // 1. 상태 비교 (Approved 우선)
+                                if (isR1Approved && !isR2Approved) return@Comparator -1
+                                if (!isR1Approved && isR2Approved) return@Comparator 1
+
+                                // 2. 같은 그룹 내 정렬
+                                if (isR1Approved) {
+                                    // 둘 다 승인됨 -> 임박한 순서대로 (오름차순)
+                                    val dateCompare = r1.date.compareTo(r2.date)
+                                    if (dateCompare != 0) dateCompare else r1.periodStart - r2.periodStart
+                                } else {
+                                    // 둘 다 완료됨 -> 최신 기록이 위로 (내림차순)
+                                    val dateCompare = r2.date.compareTo(r1.date)
+                                    if (dateCompare != 0) dateCompare else r2.periodStart - r1.periodStart
+                                }
+                            })
 
                         displayReservations()
                     }

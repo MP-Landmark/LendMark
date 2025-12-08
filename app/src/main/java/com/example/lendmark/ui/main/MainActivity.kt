@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -14,6 +15,7 @@ import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
+import com.bumptech.glide.Glide
 import com.example.lendmark.R
 import com.example.lendmark.ui.auth.AuthActivity
 import com.example.lendmark.ui.building.BuildingListFragment
@@ -25,10 +27,13 @@ import com.example.lendmark.ui.reservation.ReservationMapFragment
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
+import com.google.firebase.messaging.FirebaseMessaging
+import androidx.activity.viewModels
+import com.example.lendmark.ui.notification.NotificationViewModel
 
 class MainActivity : AppCompatActivity() {
 
-    // ... (변수 선언부는 기존과 동일) ...
     private lateinit var auth: FirebaseAuth
     private lateinit var db: FirebaseFirestore
     private lateinit var drawerLayout: DrawerLayout
@@ -43,10 +48,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnLogout: AppCompatButton
     private lateinit var tvUserName: TextView
     private lateinit var tvUserEmail: TextView
+    private lateinit var imgProfile: ImageView
+
+    //  앱 켜지자마자 알림 비서(ViewModel) 고용! (자동으로 init 실행됨)
+    private val notificationViewModel: NotificationViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        Log.d("MainActivity", "알림 시스템 시작 여부: ${notificationViewModel.isInAppEnabled}")
 
         auth = FirebaseAuth.getInstance()
         db = FirebaseFirestore.getInstance()
@@ -54,8 +65,8 @@ class MainActivity : AppCompatActivity() {
         initViews()
         loadUserData()
         setupListeners() // 리스너 설정
+        fetchFcmToken() // fcm 토큰 가져오기
 
-        // 뒤로가기 콜백 설정 (OnBackPressedDispatcher)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 handleBackPress()
@@ -67,25 +78,57 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ... (initViews, loadUserData는 기존과 동일) ...
+    private fun fetchFcmToken() {
+        FirebaseMessaging.getInstance().token
+            .addOnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    Log.w("FCM", "Fetching FCM token failed", task.exception)
+                    return@addOnCompleteListener
+                }
+
+                val token = task.result
+                Log.d("FCM", " Current FCM Token: $token")
+
+                val uid = FirebaseAuth.getInstance().currentUser?.uid
+                if (uid != null) {
+                    saveTokenToFirestore(uid, token)
+                } else {
+                    Log.w("FCM", "⚠ 사용자 로그인 상태가 아님 → 토큰 저장 생략")
+                }
+            }
+    }
+
+    private fun saveTokenToFirestore(userId: String, token: String) {
+        val db = FirebaseFirestore.getInstance()
+
+        val data = mapOf(
+            "fcmToken" to token,
+            "updatedAt" to System.currentTimeMillis()
+        )
+
+        db.collection("users").document(userId)
+            .set(data, SetOptions.merge())
+            .addOnSuccessListener {
+                Log.d("FCM", "Token saved successfully")
+            }
+            .addOnFailureListener { e ->
+                Log.e("FCM", "Failed to save token", e)
+            }
+    }
 
     private fun setupListeners() {
-        // [수정됨] 햄버거/뒤로가기 버튼 클릭 로직
         btnMenu.setOnClickListener {
             val currentFragment = supportFragmentManager.findFragmentById(R.id.main_container)
             val isHome = currentFragment is HomeFragment
             val isSubPage = supportFragmentManager.backStackEntryCount > 0
 
-            // 홈 화면이 아니거나 상세 페이지라면 -> 뒤로가기 동작
             if (!isHome || isSubPage) {
                 handleBackPress()
             } else {
-                // 홈 화면 메인이라면 -> 드로어 열기
                 drawerLayout.openDrawer(GravityCompat.START)
             }
         }
 
-        // ... (드로어 내부 버튼 리스너들은 기존과 동일) ...
         btnCloseDrawer.setOnClickListener { drawerLayout.closeDrawer(GravityCompat.START) }
         menuMyReservation.setOnClickListener {
             drawerLayout.closeDrawer(GravityCompat.START)
@@ -111,16 +154,13 @@ class MainActivity : AppCompatActivity() {
             replaceFragment(NotificationListFragment(), "Notifications")
         }
 
-        // 백스택 변경 감지
         supportFragmentManager.addOnBackStackChangedListener {
             updateUiAfterNavigation()
         }
 
-        // 바텀 네비게이션
         bottomNav.setOnItemSelectedListener { item ->
             val currentFragment = supportFragmentManager.findFragmentById(R.id.main_container)
 
-            // 같은 탭 클릭 방지
             if (supportFragmentManager.backStackEntryCount == 0) {
                 val isSameTab = when(item.itemId) {
                     R.id.nav_home -> currentFragment is HomeFragment
@@ -148,7 +188,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun replaceFragment(fragment: Fragment, title: String, addToBackStack: Boolean = true) {
-
         val transaction = supportFragmentManager.beginTransaction()
             .replace(R.id.main_container, fragment)
 
@@ -156,7 +195,7 @@ class MainActivity : AppCompatActivity() {
             transaction.addToBackStack(title)
         }
 
-        transaction.commitAllowingStateLoss()  // ← 변경!
+        transaction.commitAllowingStateLoss()
 
         tvHeaderTitle.text = title
 
@@ -167,39 +206,32 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    // [핵심 수정] UI 상태 업데이트 로직 (제목 및 버튼 아이콘)
     private fun updateUiAfterNavigation() {
         val count = supportFragmentManager.backStackEntryCount
         val currentFragment = supportFragmentManager.findFragmentById(R.id.main_container)
         val isSubPage = count > 0
         val isHome = currentFragment is HomeFragment
 
-        // 1. 버튼 아이콘 설정
-        // 홈 화면이고 백스택이 없을 때만 '햄버거' / 나머지는 모두 '뒤로가기'
         if (isHome && !isSubPage) {
             btnMenu.setImageResource(R.drawable.ic_menu)
         } else {
             btnMenu.setImageResource(R.drawable.ic_arrow_back)
         }
 
-        // 2. 제목 설정
         if (isSubPage) {
-            // 상세 페이지라면 백스택에 저장된 이름을 가져옴 (예: 건물명, 호실명)
             val currentEntry = supportFragmentManager.getBackStackEntryAt(count - 1)
             tvHeaderTitle.text = currentEntry.name
         } else {
-            // 탭의 메인 화면이라면 프래그먼트 타입에 따라 제목 설정
             tvHeaderTitle.text = when (currentFragment) {
                 is BuildingListFragment -> "Classroom Reservation"
                 is ReservationMapFragment -> "Map View"
                 is MyPageFragment -> "My Page"
                 is NotificationListFragment -> "Notifications"
                 is ManageFavoritesFragment -> "Manage Favorites"
-                else -> "LendMark" // HomeFragment
+                else -> "LendMark"
             }
         }
 
-        // 3. 바텀 네비게이션 아이콘 동기화
         val selectedItem = when (currentFragment) {
             is HomeFragment -> R.id.nav_home
             is BuildingListFragment -> R.id.nav_book
@@ -212,7 +244,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // 뒤로가기 로직 분리
     private fun handleBackPress() {
         if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START)
@@ -222,18 +253,14 @@ class MainActivity : AppCompatActivity() {
         val currentFragment = supportFragmentManager.findFragmentById(R.id.main_container)
 
         if (supportFragmentManager.backStackEntryCount > 0) {
-            // 상세 페이지면 스택 하나 뺌 (제목도 자동으로 전 단계로 돌아감)
             supportFragmentManager.popBackStack()
         } else if (currentFragment !is HomeFragment) {
-            // 홈이 아닌 다른 탭의 메인 화면이면 -> 홈 탭으로 이동
             bottomNav.selectedItemId = R.id.nav_home
         } else {
-            // 홈 화면이면 앱 종료
             finish()
         }
     }
 
-    // ... (initViews, loadUserData, openManageFavorites 등 나머지 함수 유지) ...
     private fun initViews() {
         drawerLayout = findViewById(R.id.drawerLayout)
         btnMenu = findViewById(R.id.btnMenu)
@@ -249,6 +276,7 @@ class MainActivity : AppCompatActivity() {
         btnLogout = drawerContent.findViewById(R.id.btnLogout)
         tvUserName = drawerContent.findViewById(R.id.tvUserName)
         tvUserEmail = drawerContent.findViewById(R.id.tvUserEmail)
+        imgProfile = drawerContent.findViewById(R.id.imgProfile)
     }
 
     private fun loadUserData() {
@@ -259,14 +287,30 @@ class MainActivity : AppCompatActivity() {
             if (document != null && document.exists()) {
                 val name = document.getString("name") ?: "알 수 없음"
                 val email = document.getString("email") ?: currentUser.email
+                val profileImageUrl = document.getString("profileImageUrl")
+
                 tvUserName.text = name
                 tvUserEmail.text = email
+
+                if (!profileImageUrl.isNullOrEmpty()) {
+                    imgProfile.imageTintList = null
+                    imgProfile.setPadding(0, 0, 0, 0)
+                    Glide.with(this@MainActivity)
+                        .load(profileImageUrl)
+                        .circleCrop()
+                        .into(imgProfile)
+                } else {
+                    imgProfile.setImageResource(R.drawable.ic_default_profile)
+                }
+
             } else {
                 tvUserName.text = "정보 없음"
+                imgProfile.setImageResource(R.drawable.ic_default_profile)
             }
         }.addOnFailureListener { e ->
             Log.e("MainActivity", "Error fetching user data", e)
             tvUserName.text = "오류 발생"
+            imgProfile.setImageResource(R.drawable.ic_default_profile)
         }
     }
 
