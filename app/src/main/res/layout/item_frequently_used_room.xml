@@ -2,21 +2,31 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
-    android:layout_marginEnd="15dp">
+    android:paddingEnd="15dp">
 
-    <ImageView
-        android:id="@+id/ivRoomImage"
+    <androidx.cardview.widget.CardView
+        android:id="@+id/roomCard"
         android:layout_width="120dp"
         android:layout_height="120dp"
-        android:background="@drawable/bg_search_bar" 
-        android:scaleType="centerCrop" />
+        android:layout_gravity="center"
+        app:cardCornerRadius="12dp"
+        app:cardUseCompatPadding="false"
+        app:cardPreventCornerOverlap="true">
+
+        <ImageView
+            android:id="@+id/ivRoomImage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"/>
+    </androidx.cardview.widget.CardView>
 
     <TextView
         android:id="@+id/tvRoomName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="Frontier Hall 107" />
-
+        android:textColor="@android:color/black"
+        android:textSize="14sp"/>
 </LinearLayout>

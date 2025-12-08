@@ -1,5 +1,6 @@
 package com.example.lendmark.ui.home
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -95,29 +96,84 @@ class HomeViewModel : ViewModel() {
             .get()
             .addOnSuccessListener { documents ->
                 if (documents.isEmpty) {
+                    Log.d("FREQ", "No reservations found for user")
                     _frequentlyUsedRooms.value = emptyList()
                     return@addOnSuccessListener
                 }
 
+                Log.d("FREQ", "Total reservations = ${documents.size()}")
+
                 val roomCounts = documents.mapNotNull { doc ->
-                    val building = doc.getString("buildingId")
-                    val room = doc.getString("roomId")
-                    if (building != null && room != null) "$building $room" else null
+                    val buildingId = doc.getString("buildingId")
+                    val roomId = doc.getString("roomId")
+
+                    Log.d(
+                        "FREQ",
+                        "Reservation -> buildingId=$buildingId, roomId=$roomId"
+                    )
+
+                    if (buildingId != null && roomId != null)
+                        "$buildingId $roomId"
+                    else null
                 }
                     .groupingBy { it }
                     .eachCount()
 
+                Log.d("FREQ", "Grouped Rooms = $roomCounts")
+
                 val topRooms = roomCounts.entries
                     .sortedByDescending { it.value }
                     .take(3)
-                    .map { Room(it.key, "") }
 
-                _frequentlyUsedRooms.value = topRooms
+                Log.d("FREQ", "Top rooms = $topRooms")
+
+                val result = mutableListOf<Room>()
+
+                topRooms.forEach { entry ->
+                    val parts = entry.key.split(" ")
+                    val buildingId = parts.getOrNull(0) ?: ""
+                    val roomId = parts.getOrNull(1) ?: ""
+
+                    Log.d("FREQ", "Processing room: buildingId=$buildingId, roomId=$roomId")
+
+                    db.collection("buildings").document(buildingId)
+                        .get()
+                        .addOnSuccessListener { doc ->
+                            if (!doc.exists()) {
+                                Log.e("FREQ", "Building document NOT FOUND for id=$buildingId")
+                            }
+
+                            val imageUrl = doc.getString("imageUrl") ?: ""
+
+                            Log.d(
+                                "FREQ",
+                                "Building loaded: id=$buildingId, imageUrl=$imageUrl"
+                            )
+
+                            result.add(
+                                Room(
+                                    name = "$buildingId Hall $roomId",
+                                    imageUrl = imageUrl
+                                )
+                            )
+
+                            Log.d("FREQ", "Added Room -> name=${"$buildingId Hall $roomId"}, imageUrl=$imageUrl")
+
+                            if (result.size == topRooms.size) {
+                                Log.d("FREQ", "Final result list ready: $result")
+                                _frequentlyUsedRooms.value = result
+                            }
+                        }
+                        .addOnFailureListener { e ->
+                            Log.e("FREQ", "Error loading building $buildingId", e)
+                        }
+                }
             }
-            .addOnFailureListener {
-                _frequentlyUsedRooms.value = emptyList()
+            .addOnFailureListener { e ->
+                Log.e("FREQ", "Failed to load reservations", e)
             }
     }
+
 
 
     // ---------------------------------------------------------
