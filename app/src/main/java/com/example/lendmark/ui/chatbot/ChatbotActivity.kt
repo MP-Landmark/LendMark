@@ -77,7 +77,7 @@ class ChatBotActivity : AppCompatActivity() {
     private fun setupToolbar() {
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.title = "AI Assistant"
+        supportActionBar?.title = "빠른 강의실 찾기"
 
         toolbar.setNavigationOnClickListener { handleBackPress() }
     }
@@ -172,14 +172,31 @@ class ChatBotActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     private fun updateTimeSpinner(date: String) {
         timeList.clear()
+
         val today = LocalDate.now().toString()
-        val nowHour = LocalTime.now().hour
+        val now = LocalTime.now()
+        val nowHour = now.hour
+
+        val START = 8
+        val END = 18
 
         if (date == today) {
-            if (nowHour < 18) timeList.add("지금 바로")
-            for (h in 8..17) if (h > nowHour) timeList.add("${h}시")
+            if (nowHour < END) {
+                timeList.add("지금 바로")
+
+                var nextHour = nowHour + 1
+                while (nextHour <= END) {
+                    val diff = nextHour - nowHour
+                    timeList.add("${diff}시간 뒤 (${nextHour}시)")
+                    nextHour++
+                }
+            } else {
+                timeList.add("오늘은 예약 가능한 시간이 없습니다. \n강의실 예약은 평일 08시 ~ 18시에만 가능합니다.")
+            }
         } else {
-            for (h in 8..17) timeList.add("${h}시")
+            for (h in START..END) {
+                timeList.add("${h}시")
+            }
         }
 
         spinnerTime.adapter = ArrayAdapter(
@@ -188,6 +205,7 @@ class ChatBotActivity : AppCompatActivity() {
             setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         }
     }
+
 
     private fun loadBuildings() {
         db.collection("buildings")
@@ -233,8 +251,26 @@ class ChatBotActivity : AppCompatActivity() {
         addUserMessage("$date $timeText 예약 가능한 ${building.name} 강의실 알려줘")
 
         val hour =
-            if (timeText == "지금 바로") LocalTime.now().hour
-            else timeText.replace("시", "").trim().toInt()
+            when {
+                timeText == "지금 바로" -> {
+                    val nowHour = LocalTime.now().hour
+                    if (nowHour < 8) 8       // 강의실은 8시부터
+                    else if (nowHour > 18) 18
+                    else nowHour
+                }
+
+                timeText.contains("시간 뒤") -> {
+                    // 괄호 속 "15시" 등 실제 시각만 추출
+                    val regex = Regex("\\((\\d+)시\\)")
+                    val match = regex.find(timeText)
+                    match?.groupValues?.get(1)?.toInt()
+                        ?: LocalTime.now().hour
+                }
+
+                else -> {
+                    timeText.replace("시", "").trim().toInt()
+                }
+            }
 
         requestAI(building.id, building.name, date, hour)
     }
