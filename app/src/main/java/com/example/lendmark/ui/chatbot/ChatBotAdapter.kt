@@ -50,8 +50,6 @@ class ChatBotAdapter(
         messages.add(message)
         notifyItemInserted(messages.size - 1)
     }
-
-    /** 🔥 bullet (- 105) 라인 제거 */
     private fun removeAiBulletItems(answer: String): String {
         return answer
             .lines()
@@ -59,12 +57,10 @@ class ChatBotAdapter(
             .joinToString("\n")
     }
 
-    /** 🔥 숫자만 남기기 — Firestore key와 동일하게 맞추기 위해 */
     private fun normalizeRoomId(raw: String): String {
         return raw.trim().replace(Regex("[^0-9]"), "")
     }
 
-    /** 🔥 예약하기 클릭 가능하게 구성 */
     private fun bindAiText(holder: AiViewHolder, msg: ChatMessage) {
 
         val rooms = msg.roomList?.map { normalizeRoomId(it) } ?: emptyList()
@@ -79,13 +75,34 @@ class ChatBotAdapter(
 
             builder.append("${roomId}호 ")
 
-            val start = builder.length
-            builder.append("예약하기")
+            val label = "바로 예약하기"
+            builder.append(label)
+
+            val start = builder.length - label.length
             val end = builder.length
+
+            // 클릭 스팬
+            val clickSpan = object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    onRoomClick(roomId)
+                }
+
+                override fun updateDrawState(ds: android.text.TextPaint) {
+                    ds.isUnderlineText = false
+                }
+            }
+
+            // 스타일 스팬들 적용
+            builder.setSpan(clickSpan, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            builder.setSpan(PaddingSpan(25, 15), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            builder.setSpan(android.text.style.ForegroundColorSpan(Color.parseColor("#1E88E5")), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            builder.setSpan(android.text.style.BackgroundColorSpan(Color.parseColor("#E3F2FD")), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+            builder.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+
 
             val span = object : ClickableSpan() {
                 override fun onClick(widget: View) {
-                    onRoomClick(roomId)  // 🔥 이미 sanitize 완료된 값 전달
+                    onRoomClick(roomId)  // 이미 sanitize 완료된 값 전달
                 }
 
                 override fun updateDrawState(ds: android.text.TextPaint) {
@@ -95,7 +112,7 @@ class ChatBotAdapter(
             }
 
             builder.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
-            builder.append("\n")
+            builder.append("\n\n")
         }
 
         holder.aiMsg.text = builder
