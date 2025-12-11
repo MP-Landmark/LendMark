@@ -184,7 +184,7 @@ class ChatBotActivity : AppCompatActivity() {
             when {
                 // 현재 시간이 18시 이후 -> 오늘 예약 불가
                 nowHour >= END -> {
-                    timeList.add("오늘은 예약 가능한 시간이 없습니다.\n강의실 예약은 평일 08시~18시까지만 가능합니다.")
+                    timeList.add("예약 가능한 시간이 지났습니다.(08시~18시 가능)")
                 }
 
                 // 현재 시간이 08:00 이전 → "지금 바로" 금지, 8~18시만 표시

@@ -3,6 +3,7 @@ package com.example.lendmark.ui.home
 import android.util.Log
 import androidx.lifecycle.*
 import com.example.lendmark.data.local.RecentRoomEntity
+import com.example.lendmark.data.model.Building
 import com.example.lendmark.data.sources.announcement.*
 import com.example.lendmark.ui.home.adapter.Room
 import com.example.lendmark.ui.main.MyApp
@@ -12,7 +13,6 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
-
 
 data class UpcomingReservationInfo(
     val reservationId: String,
@@ -25,7 +25,7 @@ class HomeViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
     private val uid = FirebaseAuth.getInstance().currentUser?.uid
 
-    // ⭐ ANNOUNCEMENT 슬라이드 구성 요소들
+    // ============= ANNOUNCEMENT =============
     private val announcementRepo = AnnouncementRepository(
         weatherRepo = WeatherRepository(),
         academicCrawler = AcademicCrawler()
@@ -35,27 +35,42 @@ class HomeViewModel : ViewModel() {
     val announcementSlides: LiveData<List<AnnouncementItem>> = _announcementSlides
 
 
-
+    // ============= FREQUENTLY USED ROOMS =============
     private val _frequentlyUsedRooms = MutableLiveData<List<Room>>()
     val frequentlyUsedRooms: LiveData<List<Room>> = _frequentlyUsedRooms
 
+    // ============= UPCOMING RESERVATION =============
     private val _upcomingReservation = MutableLiveData<UpcomingReservationInfo?>()
     val upcomingReservation: LiveData<UpcomingReservationInfo?> = _upcomingReservation
 
+    // ============= RECENT VIEWED ROOMS =============
     private val _recentViewedRooms = MutableLiveData<List<RecentRoomEntity>>()
     val recentViewedRooms: LiveData<List<RecentRoomEntity>> = _recentViewedRooms
 
+    // ============= SEARCH RESULT =============
     private val _searchResults = MutableLiveData<List<String>>()
     val searchResults: LiveData<List<String>> = _searchResults
 
+    // ============= HOME BUILDING LIST (NEW) =============
+    private val _homeBuildings = MutableLiveData<List<Building>>()  // 랜덤 3개
+    val homeBuildings: LiveData<List<Building>> = _homeBuildings
 
+
+    // =============================================
+    // LOAD ALL HOME DATA
+    // =============================================
     fun loadHomeData() {
         loadAnnouncementSlides()
         loadFrequentlyUsedRooms()
         loadUpcomingReservation()
         loadRecentViewedRooms()
+        loadHomeBuildings()
     }
 
+
+    // =============================================
+    // ANNOUNCEMENT
+    // =============================================
     private fun loadAnnouncementSlides() {
         viewModelScope.launch {
             val slides = announcementRepo.loadAnnouncements()
@@ -63,12 +78,17 @@ class HomeViewModel : ViewModel() {
         }
     }
 
+
+    // =============================================
+    // RECENT VIEWED ROOMS
+    // =============================================
     fun loadRecentViewedRooms() {
         viewModelScope.launch {
             val dao = MyApp.database.recentRoomDao()
             _recentViewedRooms.postValue(dao.getRecentRooms())
         }
     }
+
 
     fun addRecentViewedRoom(roomId: String, buildingId: String, roomName: String) {
         viewModelScope.launch {
@@ -86,6 +106,10 @@ class HomeViewModel : ViewModel() {
         }
     }
 
+
+    // =============================================
+    // FREQUENTLY USED ROOMS
+    // =============================================
     private fun loadFrequentlyUsedRooms() {
         if (uid == null) {
             _frequentlyUsedRooms.value = emptyList()
@@ -101,7 +125,6 @@ class HomeViewModel : ViewModel() {
                     return@addOnSuccessListener
                 }
 
-                // 1. 가장 많이 쓴 강의실 top 3 계산
                 val roomCounts = docs.mapNotNull { doc ->
                     val b = doc.getString("buildingId")
                     val r = doc.getString("roomId")
@@ -111,7 +134,6 @@ class HomeViewModel : ViewModel() {
                 val top = roomCounts.entries.sortedByDescending { it.value }.take(3)
                 val result = mutableListOf<Room>()
 
-                // 2. 건물 정보 가져와서 이름으로 변환
                 if (top.isEmpty()) {
                     _frequentlyUsedRooms.value = emptyList()
                 } else {
@@ -122,9 +144,8 @@ class HomeViewModel : ViewModel() {
                             .get()
                             .addOnSuccessListener { doc ->
                                 val img = doc.getString("imageUrl") ?: ""
-                                val buildingName = doc.getString("name") ?: buildingId // 건물명 가져오기
+                                val buildingName = doc.getString("name") ?: buildingId
 
-                                // "건물명 호실" 형태로 저장 (예: Dasan Hall 110)
                                 result.add(Room("$buildingName $roomId", img))
 
                                 if (result.size == top.size) {
@@ -136,14 +157,16 @@ class HomeViewModel : ViewModel() {
             }
     }
 
-    // HomeViewModel.kt
+
+    // =============================================
+    // UPCOMING RESERVATION
+    // =============================================
     private fun loadUpcomingReservation() {
         if (uid == null) {
             _upcomingReservation.value = null
             return
         }
 
-        // 1. 예약 정보 가져오기
         db.collection("reservations")
             .whereEqualTo("userId", uid)
             .whereEqualTo("status", "approved")
@@ -155,85 +178,50 @@ class HomeViewModel : ViewModel() {
                 }
 
                 val now = System.currentTimeMillis()
-                val oneHourInMillis = 60 * 60 * 1000
-                val oneHourLater = now + oneHourInMillis
+                val oneHourLater = now + (60 * 60 * 1000)
 
-                // 2. 1시간 이내 예약 찾기
                 val targetDoc = snap.documents.firstOrNull { doc ->
-                    val dateStr = doc.getString("date") ?: ""
-                    val periodStart = doc.getLong("periodStart")?.toInt() ?: -1
-
-                    if (dateStr.isNotEmpty() && periodStart != -1) {
-                        val startTimeMillis = convertToMillis(dateStr, periodStart)
-                        startTimeMillis in now..oneHourLater
-                    } else {
-                        false
-                    }
+                    val dateStr = doc.getString("date") ?: return@firstOrNull false
+                    val start = doc.getLong("periodStart")?.toInt() ?: return@firstOrNull false
+                    val startMillis = convertToMillis(dateStr, start)
+                    startMillis in now..oneHourLater
                 }
 
-                if (targetDoc != null) {
-                    val buildingId = targetDoc.getString("buildingId") ?: ""
-                    val roomId = targetDoc.getString("roomId") ?: ""
-                    val start = targetDoc.getLong("periodStart")?.toInt() ?: 0
-                    val end = targetDoc.getLong("periodEnd")?.toInt() ?: 0
-                    val date = targetDoc.getString("date") ?: ""
-
-                    // 3. 건물 이름 가져오기 (Nested Query)
-                    db.collection("buildings").document(buildingId).get()
-                        .addOnSuccessListener { buildingDoc ->
-                            val buildingName = buildingDoc.getString("name") ?: ""
-
-                            // 포맷 변경: "2. Dasan Hall - no.110"
-                            val formattedRoomName = "$buildingName $roomId"
-
-                            // 시간 수정: 끝나는 교시에 +1 (예: 8-9교시 -> 16:00~18:00)
-                            val formattedTime = "$date • ${periodToTime(start)} - ${periodToTime(end + 1)}"
-
-                            _upcomingReservation.value = UpcomingReservationInfo(
-                                reservationId = targetDoc.id,
-                                roomName = formattedRoomName,
-                                time = formattedTime
-                            )
-                        }
-                        .addOnFailureListener {
-                            // 건물 정보 실패 시 기존 방식대로
-                            _upcomingReservation.value = UpcomingReservationInfo(
-                                reservationId = targetDoc.id,
-                                roomName = "$buildingId $roomId",
-                                time = "$date • ${periodToTime(start)} - ${periodToTime(end + 1)}"
-                            )
-                        }
-                } else {
+                if (targetDoc == null) {
                     _upcomingReservation.value = null
+                    return@addOnSuccessListener
                 }
-            }
-            .addOnFailureListener {
-                _upcomingReservation.value = null
+
+                val buildingId = targetDoc.getString("buildingId") ?: ""
+                val roomId = targetDoc.getString("roomId") ?: ""
+                val start = targetDoc.getLong("periodStart")!!.toInt()
+                val end = targetDoc.getLong("periodEnd")!!.toInt()
+                val date = targetDoc.getString("date") ?: ""
+
+                db.collection("buildings").document(buildingId).get()
+                    .addOnSuccessListener { buildingDoc ->
+                        val buildingName = buildingDoc.getString("name") ?: buildingId
+                        val time = "$date • ${periodToTime(start)} - ${periodToTime(end + 1)}"
+
+                        _upcomingReservation.value =
+                            UpcomingReservationInfo(targetDoc.id, "$buildingName $roomId", time)
+                    }
             }
     }
 
-    // 날짜(String) + 교시(Int) -> 시간(Long) 변환 함수 추가
+
     private fun convertToMillis(dateStr: String, periodStart: Int): Long {
         return try {
-            // 날짜 포맷 (DB에 저장된 형태가 "yyyy-MM-dd" 라고 가정)
-            // 만약 "yyyy.MM.dd" 등을 쓴다면 아래 패턴을 수정해야 합니다.
             val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
             val date = sdf.parse(dateStr) ?: return 0L
 
-            val calendar = Calendar.getInstance()
-            calendar.time = date
-
-            // 교시 -> 시간 변환 (0교시 = 08시, 1교시 = 09시 ...)
-            val hourOfDay = 8 + periodStart
-
-            calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
-            calendar.set(Calendar.MINUTE, 0)
-            calendar.set(Calendar.SECOND, 0)
-            calendar.set(Calendar.MILLISECOND, 0)
-
-            calendar.timeInMillis
+            val cal = Calendar.getInstance()
+            cal.time = date
+            cal.set(Calendar.HOUR_OF_DAY, 8 + periodStart)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.timeInMillis
         } catch (e: Exception) {
-            e.printStackTrace()
             0L
         }
     }
@@ -243,6 +231,10 @@ class HomeViewModel : ViewModel() {
         return String.format("%02d:00", hour)
     }
 
+
+    // =============================================
+    // 🔎 BUILDING SEARCH
+    // =============================================
     fun searchBuilding(query: String) {
         val clean = query.trim()
         if (clean.isEmpty()) {
@@ -266,5 +258,23 @@ class HomeViewModel : ViewModel() {
 
     fun clearSearchResults() {
         _searchResults.value = emptyList()
+    }
+
+
+    // =============================================
+    // ⭐ HOME — BUILDING LIST (RANDOM 3개)
+    // =============================================
+    private fun loadHomeBuildings() {
+        db.collection("buildings")
+            .get()
+            .addOnSuccessListener { docs ->
+                val all = docs.toObjects(Building::class.java)
+
+                // 🔥 랜덤 3개 선택
+                _homeBuildings.value = all.shuffled().take(3)
+            }
+            .addOnFailureListener {
+                _homeBuildings.value = emptyList()
+            }
     }
 }

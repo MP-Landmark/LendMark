@@ -1,6 +1,5 @@
 package com.example.lendmark.ui.room
 
-import android.R.attr.data
 import android.app.AlertDialog
 import android.graphics.Color
 import android.os.Bundle

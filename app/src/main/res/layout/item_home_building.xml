@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp"
+    android:gravity="center">
+
+    <!-- 🔥 박스 배경 제거 → 이미지만 표시 -->
+    <ImageView
+        android:id="@+id/imgBuilding"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:scaleType="centerCrop"
+        android:background="@drawable/bg_gray_box"
+        android:clipToOutline="true" />
+
+    <!-- 🔥 글씨 가운데 정렬 -->
+    <TextView
+        android:id="@+id/tvBuildingName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textSize="14sp"
+        android:textColor="@android:color/black"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:maxLines="1" />
+
+</LinearLayout>

@@ -14,12 +14,15 @@
         android:fillViewport="true"
         android:clipToPadding="false"
         android:paddingBottom="200dp">
+
         <LinearLayout
             android:id="@+id/contentLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
+
+            <!-- 🔍 검색 + 챗봇 -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -54,7 +57,6 @@
                     android:imeOptions="actionSearch"
                     android:maxLines="1"
                     android:padding="12dp" />
-
             </RelativeLayout>
 
             <androidx.recyclerview.widget.RecyclerView
@@ -66,8 +68,9 @@
                 android:background="#FFFFFF"
                 android:elevation="4dp"
                 android:visibility="gone"
-                tools:visibility="visible" />
+                tools:visibility="visible"/>
 
+            <!-- 📢 공지 -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -82,6 +85,7 @@
                 android:layout_height="200dp"
                 android:layout_marginTop="8dp"/>
 
+            <!-- ⭐ 자주 사용하는 강의실 -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -96,6 +100,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"/>
 
+            <!-- 👀 최근 본 강의실 -->
             <TextView
                 android:id="@+id/tvRecentlyViewedTitle"
                 android:layout_width="wrap_content"
@@ -103,41 +108,46 @@
                 android:text="Recently Viewed Rooms"
                 android:textSize="18sp"
                 android:textStyle="bold"
-                android:layout_marginTop="24dp" />
+                android:layout_marginTop="24dp"/>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerRecentlyViewed"
                 android:layout_width="match_parent"
                 android:layout_height="80dp"
-                android:layout_marginTop="8dp" />
+                android:layout_marginTop="8dp"/>
 
+            <!-- 🏫 Building List (3개만 보임) -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp">
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Building List"
                     android:textSize="18sp"
                     android:textStyle="bold" />
+
                 <TextView
                     android:id="@+id/tvSeeAllBuildings"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="See all >"
-                    android:layout_alignParentEnd="true" />
+                    android:layout_alignParentEnd="true"
+                    android:textColor="@color/purple_700"/>
             </RelativeLayout>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerBuildingList"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"/>
+                android:layout_marginTop="8dp" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- 🔔 다가오는 예약 -->
     <include
         android:id="@+id/included_upcoming_reservation"
         layout="@layout/view_upcoming_reservation"

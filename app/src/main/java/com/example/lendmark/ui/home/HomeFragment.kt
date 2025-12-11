@@ -11,15 +11,12 @@ import android.view.inputmethod.InputMethodManager
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import com.example.lendmark.ui.my.ConfirmCancelDialog
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.lendmark.R
 import com.example.lendmark.databinding.FragmentHomeBinding
 import com.example.lendmark.ui.chatbot.ChatBotActivity
-import com.example.lendmark.ui.home.adapter.AnnouncementAdapter
-import com.example.lendmark.ui.home.adapter.FrequentlyUsedRoomsAdapter
-import com.example.lendmark.ui.home.adapter.RecentlyViewedRoomsAdapter
-import com.example.lendmark.ui.home.adapter.SearchResultsAdapter
+import com.example.lendmark.ui.home.adapter.*
+import com.example.lendmark.ui.my.ConfirmCancelDialog
 import com.example.lendmark.ui.my.ReservationDetailDialogFS
 import com.example.lendmark.ui.my.ReservationFS
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -52,12 +49,18 @@ class HomeFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+
         binding.searchBar.text.clear()
         binding.searchBar.clearFocus()
+
         homeViewModel.clearSearchResults()
         binding.recyclerSearchResults.visibility = View.GONE
+        binding.recyclerSearchResults.adapter = null
     }
 
+    // -------------------------------------------------------------------------
+    //  UI 세팅
+    // -------------------------------------------------------------------------
     private fun setupUI() {
 
         binding.recyclerFrequentlyUsed.layoutManager =
@@ -72,30 +75,41 @@ class HomeFragment : Fragment() {
         binding.recyclerSearchResults.layoutManager =
             LinearLayoutManager(requireContext(), LinearLayoutManager.VERTICAL, false)
 
+        // "See all" 클릭 → Book 탭 이동
         binding.tvSeeAllBuildings.setOnClickListener {
             navigateToBookingTab(null)
         }
 
+        // 챗봇
         binding.ivChatbot.setOnClickListener {
             startActivity(Intent(requireContext(), ChatBotActivity::class.java))
         }
 
+        // 화면 터치하면 검색 결과 숨기기
         binding.contentLayout.setOnClickListener {
             hideKeyboard()
             binding.searchBar.clearFocus()
+
             homeViewModel.clearSearchResults()
             binding.recyclerSearchResults.visibility = View.GONE
+            binding.recyclerSearchResults.adapter = null
         }
     }
 
+    // -------------------------------------------------------------------------
+    //  검색
+    // -------------------------------------------------------------------------
     private fun setupSearch() {
         binding.searchBar.setOnEditorActionListener { v, actionId, event ->
+
             val isEnterKey =
-                event != null && event.keyCode == android.view.KeyEvent.KEYCODE_ENTER &&
+                event != null &&
+                        event.keyCode == android.view.KeyEvent.KEYCODE_ENTER &&
                         event.action == android.view.KeyEvent.ACTION_DOWN
 
             val isSearchAction =
-                actionId == EditorInfo.IME_ACTION_SEARCH || actionId == EditorInfo.IME_ACTION_DONE
+                actionId == EditorInfo.IME_ACTION_SEARCH ||
+                        actionId == EditorInfo.IME_ACTION_DONE
 
             if (isEnterKey || isSearchAction) {
                 homeViewModel.searchBuilding(v.text.toString())
@@ -106,25 +120,23 @@ class HomeFragment : Fragment() {
         }
     }
 
+    // -------------------------------------------------------------------------
+    //  ViewModel Observe
+    // -------------------------------------------------------------------------
     private fun observeViewModel() {
 
         // 공지 슬라이드
-        homeViewModel.announcementSlides.observe(viewLifecycleOwner) { items ->
+        homeViewModel.announcementSlides.observe(viewLifecycleOwner) {
             binding.viewPagerAnnouncements.adapter =
-                AnnouncementAdapter(
-                    items,
-                    onReviewClick = { navigateToReviewPage() }
-                )
+                AnnouncementAdapter(it, onReviewClick = { navigateToReviewPage() })
         }
 
-
-
-
-
+        // 자주 이용한 방
         homeViewModel.frequentlyUsedRooms.observe(viewLifecycleOwner) {
             binding.recyclerFrequentlyUsed.adapter = FrequentlyUsedRoomsAdapter(it)
         }
 
+        // 다가오는 예약 알림
         homeViewModel.upcomingReservation.observe(viewLifecycleOwner) { info ->
             if (info == null) {
                 binding.includedUpcomingReservation.root.visibility = View.GONE
@@ -140,12 +152,27 @@ class HomeFragment : Fragment() {
             }
         }
 
+        // 최근 본 방
         homeViewModel.recentViewedRooms.observe(viewLifecycleOwner) { rooms ->
             binding.recyclerRecentlyViewed.adapter = RecentlyViewedRoomsAdapter(rooms)
             binding.recyclerRecentlyViewed.visibility =
                 if (rooms.isEmpty()) View.GONE else View.VISIBLE
         }
 
+        // ------------------------------------------------------------
+        // 홈 빌딩 리스트 (랜덤 3개)
+        // ------------------------------------------------------------
+        homeViewModel.homeBuildings.observe(viewLifecycleOwner) { buildings ->
+
+            binding.recyclerBuildingList.adapter =
+                HomeBuildingAdapter(buildings) { selectedBuilding ->
+                    navigateToBookingTab(selectedBuilding.name)
+                }
+        }
+
+        // ------------------------------------------------------------
+        // 검색 결과
+        // ------------------------------------------------------------
         homeViewModel.searchResults.observe(viewLifecycleOwner) { results ->
             if (results.isEmpty()) {
                 binding.recyclerSearchResults.visibility = View.GONE
@@ -160,19 +187,25 @@ class HomeFragment : Fragment() {
         }
     }
 
+    // -------------------------------------------------------------------------
+    //  BOOK 탭 이동
+    // -------------------------------------------------------------------------
     private fun navigateToBookingTab(buildingName: String?) {
 
-        if (buildingName != null) {
+        if (buildingName != null && isAdded) {
             parentFragmentManager.setFragmentResult(
                 "search_request",
                 bundleOf("selectedBuilding" to buildingName)
             )
         }
 
-        val bottomNav = activity?.findViewById<BottomNavigationView>(R.id.bottomNav)
-        bottomNav?.selectedItemId = R.id.nav_book
+        activity?.findViewById<BottomNavigationView>(R.id.bottomNav)
+            ?.selectedItemId = R.id.nav_book
     }
 
+    // -------------------------------------------------------------------------
+    //  예약 상세 팝업
+    // -------------------------------------------------------------------------
     private fun loadReservationAndShowDialog(reservationId: String) {
         db.collection("reservations").document(reservationId)
             .get()
@@ -194,16 +227,14 @@ class HomeFragment : Fragment() {
 
                 ReservationDetailDialogFS(
                     reservation = reservation,
-                    onCancelClick = { showCancelConfirmationDialog(reservation.id) }, // ⭐ 여기 변경됨
+                    onCancelClick = { showCancelConfirmationDialog(reservation.id) },
                     onRegisterClick = { updateStatus(reservation.id, "finished") }
                 ).show(parentFragmentManager, "ReservationDetailDialogFS")
             }
     }
 
-    // 2. 취소 확인 팝업 함수 (MyReservationFragment에 있는 것과 동일)
     private fun showCancelConfirmationDialog(reservationId: String) {
         val dialog = ConfirmCancelDialog {
-            // 'Yes' 눌렀을 때 실행될 로직
             updateStatus(reservationId, "canceled")
         }
         dialog.show(parentFragmentManager, "ConfirmCancelDialog")
@@ -215,8 +246,8 @@ class HomeFragment : Fragment() {
     }
 
     private fun navigateToReviewPage() {
-        val bottomNav = activity?.findViewById<BottomNavigationView>(R.id.bottomNav)
-        bottomNav?.selectedItemId = R.id.nav_my
+        activity?.findViewById<BottomNavigationView>(R.id.bottomNav)
+            ?.selectedItemId = R.id.nav_my
 
         parentFragmentManager.setFragmentResult(
             "review_request",
@@ -225,8 +256,9 @@ class HomeFragment : Fragment() {
     }
 
     private fun hideKeyboard() {
-        val imm =
-            requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        val imm = requireContext()
+            .getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+
         imm.hideSoftInputFromWindow(binding.searchBar.windowToken, 0)
     }
 
